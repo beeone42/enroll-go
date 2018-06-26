@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/tkanos/gonfig"
+	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"os"
 )
@@ -15,6 +17,10 @@ type Configuration struct {
 	CaUrl  string
 	CaUser string
 	CaPass string
+}
+
+type Page struct {
+	Title string
 }
 
 func sendFile(w http.ResponseWriter, f string) {
@@ -42,11 +48,21 @@ func main() {
 
 	r.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", http.FileServer(http.Dir("assets/"))))
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { sendFile(w, "index.html") })
+	r.HandleFunc("/profile", func(w http.ResponseWriter, r *http.Request) {
+		p := Page{"Profile"}
+		t := template.New("User Profile")
+		t = template.Must(t.ParseFiles("tmpl/layout.tmpl", "tmpl/profile.tmpl"))
+		err := t.ExecuteTemplate(w, "layout", p)
+		if err != nil {
+			log.Fatalf("Template execution: %s", err)
+		}
+	})
 	r.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("api\n")
 		tac.Login()
-		res, body := tac.GetUserByTag("1234567890")
-		fmt.Fprintf(w, "ok %d %s", res, body)
+		_, body := tac.GetUserByTag("1234567890")
+		// fmt.Fprintf(w, "ok %d %s", res, body)
+		fmt.Fprintf(w, "%s", body)
 		return
 	})
 

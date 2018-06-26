@@ -123,10 +123,13 @@ func (t *Tac) Login() {
 func (t *Tac) ParseResponse(body string) string {
 	r, _ := regexp.Compile(`\[(.*),\s+\]`)
 	res := r.FindStringSubmatch(body)
-	for index, match := range res {
-		fmt.Printf("[%d] %s\n", index, match)
+	if res != nil {
+		for index, match := range res {
+			fmt.Printf("[%d] %s\n", index, match)
+		}
+		return res[1]
 	}
-	return res[1]
+	return "{}"
 }
 
 func (t *Tac) GetUserByTag(tag string) (code int, body string) {

@@ -1,5 +1,6 @@
 {
     "CaUrl": "https://tac.domain.com/GMC/",
     "CaUser": "dev",
-    "CaPass": "devpw"
+    "CaPass": "devpw",
+    "PhotoUrl": "http://ldap.domain.com/photo/"
 }

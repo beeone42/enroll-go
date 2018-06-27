@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css" />
     <!-- Material Dashboard CSS -->
     <link rel="stylesheet" href="/assets/css/material-dashboard.css">
+    <script src="/assets/js/core/jquery.min.js"></script>
   </head>
   <body>
     <div class="wrapper">
@@ -22,14 +23,14 @@
 	</div>
 	<div class="sidebar-wrapper">
 	  <ul class="nav">
-	    <li class="nav-item active ">
-	      <a class="nav-link" href="#">
+	    <li class="nav-item {{ if eq .Section "" }} active {{ end }}">
+	      <a class="nav-link" href="/">
 		<i class="material-icons">dashboard</i>
 		<p>Dashboard</p>
 	      </a>
 	    </li>
-	    <li class="nav-item ">
-	      <a class="nav-link" href="#">
+	    <li class="nav-item {{ if eq .Section "profile" }} active {{ end }}">
+	      <a class="nav-link" href="/profile">
 		<i class="material-icons">person</i>
 		<p>User Profile</p>
 	      </a>
@@ -59,7 +60,6 @@
       </div>
     </div>
     <!--   Core JS Files   -->
-    <script src="/assets/js/core/jquery.min.js"></script>
     <script src="/assets/js/core/popper.min.js"></script>
     <script src="/assets/js/bootstrap-material-design.js"></script>
 

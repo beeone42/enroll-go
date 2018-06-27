@@ -1,4 +1,36 @@
 {{define "content"}}
+<script>
+
+rfid = "{{.Rfid}}"
+
+$(function () {
+  if (rfid != "") {
+    $("#p_rfid").text(rfid);
+
+    $.getJSON("/api/profile/rfid/" + rfid, function (data) {
+      if (data['id'] != "") {
+        $("#p_id").text(data['id']);
+        $("#p_name").text(data['name']);
+        $("#p_company").text(data['company']);
+	$.getJSON("/api/profile/id/" + data['id'], function (infos) {
+	  $("#p_email").text(infos['email']);
+	  tmp = infos['email'].split("@");
+	  login = tmp[0];
+	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
+	});
+      }
+    });
+
+  }
+});
+
+function submitForm() {
+  alert($("#rfid").val())
+  document.location.href = "/profile/rfid/" + $("#rfid").val().trim()
+}
+
+</script>
+
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-4">
@@ -10,10 +42,10 @@
 	  <h4 class="card-title">Search</h4>
 	</div>
 	<div class="card-body">
-	  <form>
+	  <form method="get" action="/profile" onsubmit="submitForm();return false">
 	    <div class="form-group bmd-form-group">
               <label class="bmd-label-floating">RFID</label>
-	      <input type="text" class="form-control">
+	      <input id="rfid" type="text" class="form-control" value="{{.Rfid}}">
 	    </div>
 	  </form>
 	</div>
@@ -21,8 +53,13 @@
     </div>
     <div class="col-md-8">
       <div class="card card-profile">
-        <div class="card-avatar"><img class="img" src="/assets/img/faces/marc.jpg"></div>
-	<div class="card-body">profile:</div>
+        <div class="card-avatar"><img id="avatar" class="img" src="/assets/img/faces/john.jpg"></div>
+	<div class="card-body">
+	  <p>ID: <span id="p_id"></span></p>
+	  <p>RFID: <span id="p_rfid"></span></p>
+	  <p>NAME: <span id="p_name"></span></p>
+	  <p>EMAIL: <span id="p_email"></span></p>
+	</div>
       </div>
     </div>
   </div>

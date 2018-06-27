@@ -30,6 +30,21 @@ type TacUserProfil struct {
 	Apbypass string      `json:"apbypass"`
 }
 
+type TacUserInfos struct {
+	Firstname  string      `json:"firstname"`
+	Lastname   string      `json:"lastname"`
+	Prettyname string      `json:"prettyname"`
+	Company    string      `json:"company"`
+	Phone      string      `json:"phone"`
+	Email      string      `json:"email"`
+	Validity   interface{} `json:"validity"`
+	Expiry     interface{} `json:"expiry"`
+	Valid      interface{} `json:"valid"`
+	Expired    interface{} `json:"expired"`
+	Disabled   string      `json:"disabled"`
+	Apbypass   string      `json:"apbypass"`
+}
+
 func (t *Tac) SetCredentials(tac_url, login, passwd string) {
 	fmt.Printf("set creds...\n")
 	t.url = tac_url
@@ -41,7 +56,7 @@ func (t *Tac) SetCredentials(tac_url, login, passwd string) {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 }
 
-func (t *Tac) Request(action string, params []string) (code int, body string) {
+func (t *Tac) RequestEx(action string, params []string, paramsEx map[string]string) (code int, body string) {
 	fmt.Println("%s: %#v", action, params)
 
 	client := &http.Client{
@@ -56,6 +71,11 @@ func (t *Tac) Request(action string, params []string) (code int, body string) {
 		v.Add(fmt.Sprintf("rpc[params][%d]", i), params[i])
 		i++
 	}
+
+	for k := range paramsEx {
+		v.Add(k, paramsEx[k])
+	}
+
 	fmt.Println("v: %#v", v)
 	resp, err := client.PostForm(t.url+"action.php", v)
 	if err != nil {
@@ -71,6 +91,10 @@ func (t *Tac) Request(action string, params []string) (code int, body string) {
 	}
 	fmt.Printf("%s\n", string(contents))
 	return resp.StatusCode, string(contents)
+}
+
+func (t *Tac) Request(action string, params []string) (code int, body string) {
+	return tac.RequestEx(action, params, map[string]string{})
 }
 
 func (t *Tac) ReverseTag(tag string) string {
@@ -141,5 +165,24 @@ func (t *Tac) GetUserByTag(tag string) (code int, body string) {
 		fmt.Println("json decode error: %s", err.Error())
 	}
 	fmt.Println("%#v", p)
+	return code, res
+}
+
+func (t *Tac) GetUserById(id string) (code int, body string) {
+	var i TacUserInfos
+	code, body = t.Request("taction_get_user_info", []string{id})
+	res := t.ParseResponse(body)
+	err := json.Unmarshal([]byte(res), &i)
+	if err != nil {
+		fmt.Println("json decode error: %s", err.Error())
+	}
+	fmt.Println("%#v", i)
+	return code, res
+}
+
+func (t *Tac) GetUsersByProfile(id string) (code int, body string) {
+	code, body = t.RequestEx("taction_get_user_byprofile", []string{id}, map[string]string{"sort": "name", "dir": "ASC"})
+	res := t.ParseResponse(body)
+	fmt.Println("%#v", body)
 	return code, res
 }

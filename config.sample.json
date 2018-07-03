@@ -2,5 +2,9 @@
     "CaUrl": "https://tac.domain.com/GMC/",
     "CaUser": "dev",
     "CaPass": "devpw",
-    "PhotoUrl": "http://ldap.domain.com/photo/"
+    "PhotoUrl": "http://ldap.domain.com/photo/",
+    "LdapServer":   "ldap.domain.com:389",
+    "LdapBind":     "uid=enrollgo,ou=applications,ou=people,dc=domain,dc=com",
+    "LdapPassword": "PaSsWoRd",
+    "LdapBaseDn":   "dc=domain,dc=com"
 }

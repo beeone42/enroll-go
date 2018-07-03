@@ -9,16 +9,22 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var tac *Tac
+var ld *Ldap
 var conf Configuration
 
 type Configuration struct {
-	CaUrl    string
-	CaUser   string
-	CaPass   string
-	PhotoUrl string
+	CaUrl        string
+	CaUser       string
+	CaPass       string
+	PhotoUrl     string
+	LdapServer   string
+	LdapBind     string
+	LdapPassword string
+	LdapBaseDn   string
 }
 
 type Page struct {
@@ -82,9 +88,24 @@ func apiSearchProfileById(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func ldapSearchByRfid(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	rfid := vars["rfid"]
+	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", rfid, -1)
+	fmt.Println("search: ", search)
+	entries, err := ld.Search(search)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+	fmt.Fprintf(w, "%s", ld.JsonEntries(entries))
+	return
+}
+
 func main() {
 	r := mux.NewRouter()
 	tac = &Tac{}
+	ld = &Ldap{}
 	conf = Configuration{}
 	err := gonfig.GetConf("config.json", &conf)
 	if err != nil {
@@ -94,18 +115,16 @@ func main() {
 
 	tac.SetCredentials(conf.CaUrl, conf.CaUser, conf.CaPass)
 
+	ld.Connect(conf)
+	if ld.conn != nil {
+		defer ld.conn.Close()
+	}
+
 	r.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", http.FileServer(http.Dir("assets/"))))
 	r.HandleFunc("/", dashboard)
 	r.HandleFunc("/profile", searchProfile)
 	r.HandleFunc("/profile/rfid/{rfid}", searchProfile)
-	r.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("api\n")
-		tac.Login()
-		_, body := tac.GetUserByTag("1234567890")
-		// fmt.Fprintf(w, "ok %d %s", res, body)
-		fmt.Fprintf(w, "%s", body)
-		return
-	})
+	r.HandleFunc("/api/ldap/rfid/{rfid}", ldapSearchByRfid)
 	r.HandleFunc("/api/profile/rfid/{rfid}", apiSearchProfile)
 	r.HandleFunc("/api/profile/id/{id}", apiSearchProfileById)
 

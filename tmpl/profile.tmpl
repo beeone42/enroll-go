@@ -9,14 +9,23 @@ $(function () {
 
     $.getJSON("/api/profile/rfid/" + rfid, function (data) {
       if (data['id'] != "") {
-        $("#p_id").text(data['id']);
         $("#p_name").text(data['name']);
         $("#p_company").text(data['company']);
+
+        $("#ca_id").text(data['id']);
+        $("#ca_name").text(data['name']);
+
 	$.getJSON("/api/profile/id/" + data['id'], function (infos) {
 	  $("#p_email").text(infos['email']);
+	  $("#ca_email").text(infos['email']);
 	  tmp = infos['email'].split("@");
 	  login = tmp[0];
 	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
+	});
+	$.getJSON("/api/ldap/rfid/" + rfid, function (infos) {
+	  $("#ldap_cn").text(infos[0]['cn']);
+	  $("#ldap_dn").text(infos[0]['dn']);
+	  $("#ldap_rfid").text(infos[0]['badgerfid']);
 	});
       }
     });
@@ -33,11 +42,11 @@ function submitForm() {
 
 <div class="container-fluid">
   <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-6">
       <div class="card">
       	<div class="card-header card-header-icon card-header-primary">
 	  <div class="card-icon">
-	    <i class="material-icons">perm_identity</i>
+	    <i class="material-icons">face</i>
 	  </div>
 	  <h4 class="card-title">Search</h4>
 	</div>
@@ -51,14 +60,119 @@ function submitForm() {
 	</div>
       </div>
     </div>
-    <div class="col-md-8">
+    <div class="col-md-6">
       <div class="card card-profile">
-        <div class="card-avatar"><img id="avatar" class="img" src="/assets/img/faces/john.jpg"></div>
+        <div class="card-avatar">
+	  <img id="avatar" class="img" src="/assets/img/faces/john.jpg">
+	</div>
 	<div class="card-body">
-	  <p>ID: <span id="p_id"></span></p>
-	  <p>RFID: <span id="p_rfid"></span></p>
-	  <p>NAME: <span id="p_name"></span></p>
-	  <p>EMAIL: <span id="p_email"></span></p>
+	  <!-- name -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">face</i>
+              </span>
+	    </div>
+	    <span id="p_name"></span>
+	  </div>
+	  <!-- email -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text"><i class="material-icons">email</i></span>
+	    </div>
+	    <span id="p_email"></span>
+	  </div>
+	  <!-- rfid -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text"><i class="material-icons">credit_card</i></span>
+	    </div>
+	    <span id="p_rfid"></span>
+	  </div>
+	</div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+  
+  <!-- reponses du CA -->
+  
+    <div class="col-md-6">
+      <div class="card">
+      	<div class="card-header card-header-icon card-header-primary">
+	  <div class="card-icon">
+	    <i class="material-icons">credit_card</i>
+	  </div>
+	  <h4 class="card-title">TAC</h4>
+	</div>
+	<div class="card-body">
+	  <!-- TAC name -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">face</i>
+              </span>
+	    </div>
+	    <span id="ca_name"></span>
+	  </div>
+	  <!-- TAC id -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">list_alt</i>
+              </span>
+	    </div>
+	    <span id="ca_id"></span>
+	  </div>
+	  <!-- TAC email -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text"><i class="material-icons">email</i></span>
+	    </div>
+	    <span id="ca_email"></span>
+	  </div>
+	</div>
+      </div>
+    </div>
+
+<!-- reponses du LDAP -->
+
+    <div class="col-md-6">
+      <div class="card">
+      	<div class="card-header card-header-icon card-header-primary">
+	  <div class="card-icon">
+	    <i class="material-icons">storage</i>
+	  </div>
+	  <h4 class="card-title">LDAP</h4>
+	</div>
+	<div class="card-body">
+	  <!-- LDAP cn -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">face</i>
+              </span>
+	    </div>
+	    <span id="ldap_cn"></span>
+	  </div>
+	  <!-- LDAP dn -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">list_alt</i>
+              </span>
+	    </div>
+	    <span id="ldap_dn"></span>
+	  </div>
+	  <!-- LDAP rfid -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">credit_card</i>
+              </span>
+	    </div>
+	    <span id="ldap_rfid"></span>
+	  </div>
 	</div>
       </div>
     </div>

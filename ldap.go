@@ -72,7 +72,10 @@ func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
 	searchRequest := ldap.NewSearchRequest(
 		l.baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		query, []string{"dn", "cn", "uid", "uidnumber", "gidnumber", "sn", "givenname", "mobile", "badgerfid", "badgepin"}, nil,
+		query, []string{"dn", "cn", "uid",
+			"uidnumber", "gidnumber",
+			"sn", "givenname", "mobile",
+			"badgerfid", "badgepin", "loginshell"}, nil,
 	)
 	sr, err := l.conn.Search(searchRequest)
 	if err != nil {

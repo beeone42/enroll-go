@@ -2,30 +2,106 @@
 <script>
 
 rfid = "{{.Rfid}}"
+login = "{{.Login}}"
 
-$(function () {
-  if (rfid != "") {
-    $("#p_rfid").text(rfid);
+function ldap_by_rfid(q_rfid) {
+    $.getJSON("/api/ldap/byrfid/" + q_rfid, function (infos) {
+      $("#ldap_cn").text(infos[0]['cn']);
+      $("#ldap_dn").text(infos[0]['dn']);
+      $("#ldap_rfid").text(infos[0]['badgerfid']);
+      $("#ldap_pin").text(infos[0]['badgepin']);
+    });
+}
 
-    $.getJSON("/api/profile/rfid/" + rfid, function (data) {
+function ldap_by_login(q_login) {
+    $.getJSON("/api/ldap/bylogin/" + q_login, function (infos) {
+      if (infos != undefined && infos.IsArray()) {
+        $("#ldap_cn").text(infos[0]['cn']);
+        $("#ldap_dn").text(infos[0]['dn']);
+        $("#ldap_rfid").text(infos[0]['badgerfid']);
+        $("#ldap_pin").text(infos[0]['badgepin']);
+      }
+    });
+}
+
+function  tac_by_rfid(q_rfid) {
+
+    $.getJSON("/api/tac/user/byrfid/" + q_rfid, function (data) {
       if (data['id'] != "") {
         $("#p_name").text(data['name']);
         $("#p_company").text(data['company']);
 
         $("#ca_id").text(data['id']);
         $("#ca_name").text(data['name']);
+        $("#ca_company").text(data['company']);
 
-	$.getJSON("/api/profile/id/" + data['id'], function (infos) {
+	$.getJSON("/api/tac/user/byid/" + data['id'], function (infos) {
 	  $("#p_email").text(infos['email']);
 	  $("#ca_email").text(infos['email']);
 	  tmp = infos['email'].split("@");
 	  login = tmp[0];
 	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
 	});
-	$.getJSON("/api/ldap/rfid/" + rfid, function (infos) {
+	$.getJSON("/api/tac/profile/byid/" + data['id'], function (profiles) {
+	  //alert(profiles);
+	  var names = profiles.map(p => p.name);
+	  $("#ca_profiles").text(names.join(", "));
+	});
+	$.getJSON("/api/tac/tags/byid/" + data['id'], function (tags) {
+	  var ids = tags.map(p => formatTag(p.id));
+	  $("#ca_tags").html(ids.join(", "));
+	});
+      }
+  });
+}
+
+$(function () {
+
+  $.ajaxSetup({
+    async: false
+  });
+
+  if (login != "") {
+    ldap_by_login(login);
+    rfid = $("#ldap_rfid").text();
+    if (rfid != "") {
+      tac_by_rfid(rfid);
+    }
+  }
+
+  if (rfid != "") {
+    $("#p_rfid").text(rfid);
+
+    $.getJSON("/api/tac/user/byrfid/" + rfid, function (data) {
+      if (data['id'] != "") {
+        $("#p_name").text(data['name']);
+        $("#p_company").text(data['company']);
+
+        $("#ca_id").text(data['id']);
+        $("#ca_name").text(data['name']);
+        $("#ca_company").text(data['company']);
+
+	$.getJSON("/api/tac/user/byid/" + data['id'], function (infos) {
+	  $("#p_email").text(infos['email']);
+	  $("#ca_email").text(infos['email']);
+	  tmp = infos['email'].split("@");
+	  login = tmp[0];
+	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
+	});
+	$.getJSON("/api/tac/profile/byid/" + data['id'], function (profiles) {
+	  //alert(profiles);
+	  var names = profiles.map(p => p.name);
+	  $("#ca_profiles").text(names.join(", "));
+	});
+	$.getJSON("/api/tac/tags/byid/" + data['id'], function (tags) {
+	  var ids = tags.map(p => formatTag(p.id));
+	  $("#ca_tags").html(ids.join(", "));
+	});
+	$.getJSON("/api/ldap/byrfid/" + rfid, function (infos) {
 	  $("#ldap_cn").text(infos[0]['cn']);
 	  $("#ldap_dn").text(infos[0]['dn']);
 	  $("#ldap_rfid").text(infos[0]['badgerfid']);
+	  $("#ldap_pin").text(infos[0]['badgepin']);
 	});
       }
     });
@@ -33,9 +109,15 @@ $(function () {
   }
 });
 
+function formatTag(tag) {
+  if (tag.length == 14) {
+    return (tag.substring(0, 10) + "<b>" + tag.substring(10, 14) + "</b>");
+  }
+  return (tag);
+}
+
 function submitForm() {
-  alert($("#rfid").val())
-  document.location.href = "/profile/rfid/" + $("#rfid").val().trim()
+  document.location.href = "/profile/rfid/" + $("#rfid").val().trim();
 }
 
 </script>
@@ -56,6 +138,10 @@ function submitForm() {
               <label class="bmd-label-floating">RFID</label>
 	      <input id="rfid" type="text" class="form-control" value="{{.Rfid}}">
 	    </div>
+	    <div class="form-group bmd-form-group">
+              <label class="bmd-label-floating">LOGIN</label>
+	      <input id="login" type="text" class="form-control" value="{{.Login}}">
+	    </div>
 	  </form>
 	</div>
       </div>
@@ -74,6 +160,15 @@ function submitForm() {
               </span>
 	    </div>
 	    <span id="p_name"></span>
+	  </div>
+	  <!-- company -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">business</i>
+              </span>
+	    </div>
+	    <span id="p_company"></span>
 	  </div>
 	  <!-- email -->
 	  <div class="input-group">
@@ -115,6 +210,15 @@ function submitForm() {
 	    </div>
 	    <span id="ca_name"></span>
 	  </div>
+	  <!-- TAC company -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">business</i>
+              </span>
+	    </div>
+	    <span id="ca_company"></span>
+	  </div>
 	  <!-- TAC id -->
 	  <div class="input-group">
 	    <div class="input-group-prepend">
@@ -130,6 +234,20 @@ function submitForm() {
 	      <span class="input-group-text"><i class="material-icons">email</i></span>
 	    </div>
 	    <span id="ca_email"></span>
+	  </div>
+	  <!-- TAC profiles -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text"><i class="material-icons">meeting_room</i></span>
+	    </div>
+	    <span id="ca_profiles"></span>
+	  </div>
+	  <!-- TAC tags -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text"><i class="material-icons">credit_card</i></span>
+	    </div>
+	    <span id="ca_tags"></span>
 	  </div>
 	</div>
       </div>
@@ -172,6 +290,15 @@ function submitForm() {
               </span>
 	    </div>
 	    <span id="ldap_rfid"></span>
+	  </div>
+	  <!-- LDAP pin -->
+	  <div class="input-group">
+	    <div class="input-group-prepend">
+	      <span class="input-group-text">
+ 	        <i class="material-icons">fiber_pin</i>
+              </span>
+	    </div>
+	    <span id="ldap_pin"></span>
 	  </div>
 	</div>
       </div>

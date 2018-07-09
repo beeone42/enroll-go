@@ -32,6 +32,7 @@ type Page struct {
 	Title   string
 	Section string
 	Rfid    string
+	Login   string
 }
 
 func sendFile(w http.ResponseWriter, f string) {
@@ -46,7 +47,7 @@ func sendFile(w http.ResponseWriter, f string) {
 }
 
 func dashboard(w http.ResponseWriter, r *http.Request) {
-	p := Page{conf, "Enroll", "", ""}
+	p := Page{conf, "Enroll", "", "", ""}
 	t := template.New("Enroll")
 	t = template.Must(t.ParseFiles("tmpl/layout.tmpl", "tmpl/dashboard.tmpl"))
 	err := t.ExecuteTemplate(w, "layout", p)
@@ -58,7 +59,7 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 
 func searchProfile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	p := Page{conf, "Profile", "profile", vars["rfid"]}
+	p := Page{conf, "Profile", "profile", vars["rfid"], vars["login"]}
 	t := template.New("User Profile")
 	t = template.Must(t.ParseFiles("tmpl/layout.tmpl", "tmpl/profile.tmpl"))
 	err := t.ExecuteTemplate(w, "layout", p)
@@ -68,23 +69,53 @@ func searchProfile(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func apiSearchProfile(w http.ResponseWriter, r *http.Request) {
+func apiGetUserByRfid(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	rfid := vars["rfid"]
 	tac.Login()
 	_, body := tac.GetUserByTag(rfid)
-	// fmt.Fprintf(w, "ok %d %s", res, body)
 	fmt.Fprintf(w, "%s", body)
 	return
 }
 
-func apiSearchProfileById(w http.ResponseWriter, r *http.Request) {
+func apiGetUserById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	tac.Login()
 	_, body := tac.GetUserById(id)
-	// fmt.Fprintf(w, "ok %d %s", res, body)
 	fmt.Fprintf(w, "%s", body)
+	return
+}
+
+func apiGetProfileById(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	tac.Login()
+	_, body := tac.GetProfileById(id)
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
+func apiGetTagsById(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	tac.Login()
+	_, body := tac.GetTagsById(id)
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
+func ldapSearchByLogin(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	login := vars["login"]
+	search := strings.Replace("(uid={login})", "{login}", login, -1)
+	fmt.Println("search: ", search)
+	entries, err := ld.Search(search)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+	fmt.Fprintf(w, "%s", ld.JsonEntries(entries))
 	return
 }
 
@@ -124,9 +155,13 @@ func main() {
 	r.HandleFunc("/", dashboard)
 	r.HandleFunc("/profile", searchProfile)
 	r.HandleFunc("/profile/rfid/{rfid}", searchProfile)
-	r.HandleFunc("/api/ldap/rfid/{rfid}", ldapSearchByRfid)
-	r.HandleFunc("/api/profile/rfid/{rfid}", apiSearchProfile)
-	r.HandleFunc("/api/profile/id/{id}", apiSearchProfileById)
+	r.HandleFunc("/profile/login/{login}", searchProfile)
+	r.HandleFunc("/api/ldap/bylogin/{login}", ldapSearchByLogin)
+	r.HandleFunc("/api/ldap/byrfid/{rfid}", ldapSearchByRfid)
+	r.HandleFunc("/api/tac/user/byrfid/{rfid}", apiGetUserByRfid)
+	r.HandleFunc("/api/tac/user/byid/{id}", apiGetUserById)
+	r.HandleFunc("/api/tac/profile/byid/{id}", apiGetProfileById)
+	r.HandleFunc("/api/tac/tags/byid/{id}", apiGetTagsById)
 
 	fmt.Printf("Listening http://localhost:8080/\n")
 	http.ListenAndServe(":8080", r)

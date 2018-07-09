@@ -180,6 +180,18 @@ func (t *Tac) GetUserById(id string) (code int, body string) {
 	return code, res
 }
 
+func (t *Tac) GetProfileById(id string) (code int, body string) {
+	code, body = t.RequestEx("taction_get_profile_byuser", []string{id}, map[string]string{"sort": "name", "dir": "ASC"})
+	res := fmt.Sprintf("[%s]", t.ParseResponse(body))
+	return code, res
+}
+
+func (t *Tac) GetTagsById(id string) (code int, body string) {
+	code, body = t.Request("taction_get_tag_byuser", []string{id})
+	res := fmt.Sprintf("[%s]", t.ParseResponse(body))
+	return code, res
+}
+
 func (t *Tac) GetUsersByProfile(id string) (code int, body string) {
 	code, body = t.RequestEx("taction_get_user_byprofile", []string{id}, map[string]string{"sort": "name", "dir": "ASC"})
 	res := t.ParseResponse(body)

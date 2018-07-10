@@ -105,6 +105,15 @@ func apiGetTagsById(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func apiGetUsersByEmail(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	email := vars["email"]
+	tac.Login()
+	_, body := tac.GetUsersByEmail(email)
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
 func ldapSearchByLogin(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	login := vars["login"]
@@ -123,6 +132,20 @@ func ldapSearchByRfid(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	rfid := vars["rfid"]
 	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", rfid, -1)
+	fmt.Println("search: ", search)
+	entries, err := ld.Search(search)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+	fmt.Fprintf(w, "%s", ld.JsonEntries(entries))
+	return
+}
+
+func ldapAutocomplete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	query := vars["query"]
+	search := strings.Replace("(|(uid=*{query}*)(cn=*{query}*))", "{query}", query, -1)
 	fmt.Println("search: ", search)
 	entries, err := ld.Search(search)
 	if err != nil {
@@ -158,8 +181,10 @@ func main() {
 	r.HandleFunc("/profile/login/{login}", searchProfile)
 	r.HandleFunc("/api/ldap/bylogin/{login}", ldapSearchByLogin)
 	r.HandleFunc("/api/ldap/byrfid/{rfid}", ldapSearchByRfid)
+	r.HandleFunc("/api/ldap/autocomplete/{query}", ldapAutocomplete)
 	r.HandleFunc("/api/tac/user/byrfid/{rfid}", apiGetUserByRfid)
 	r.HandleFunc("/api/tac/user/byid/{id}", apiGetUserById)
+	r.HandleFunc("/api/tac/user/byemail/{email}", apiGetUsersByEmail)
 	r.HandleFunc("/api/tac/profile/byid/{id}", apiGetProfileById)
 	r.HandleFunc("/api/tac/tags/byid/{id}", apiGetTagsById)
 

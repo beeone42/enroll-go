@@ -198,3 +198,18 @@ func (t *Tac) GetUsersByProfile(id string) (code int, body string) {
 	fmt.Println("%#v", body)
 	return code, res
 }
+
+func (t *Tac) GetUsersByEmail(email string) (code int, body string) {
+	code, body = t.RequestEx("taction_get_user_list", []string{},
+		map[string]string{
+			"start":                  "0",
+			"stop":                   "1",
+			"sort":                   "name",
+			"dir":                    "ASC",
+			"filter[0][field]":       "email",
+			"filter[0][data][type]":  "string",
+			"filter[0][data][value]": email,
+		})
+	res := fmt.Sprintf("[%s]", t.ParseResponse(body))
+	return code, res
+}

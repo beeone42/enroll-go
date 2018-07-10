@@ -4,30 +4,66 @@
 rfid = "{{.Rfid}}"
 login = "{{.Login}}"
 
-function ldap_by_rfid(q_rfid) {
-    $.getJSON("/api/ldap/byrfid/" + q_rfid, function (infos) {
-      $("#ldap_cn").text(infos[0]['cn']);
-      $("#ldap_dn").text(infos[0]['dn']);
-      $("#ldap_rfid").text(infos[0]['badgerfid']);
-      $("#ldap_pin").text(infos[0]['badgepin']);
-    });
+function warn(msg)
+{
+  $.notify({
+    // options
+    message: msg
+  },{
+    // settings
+    type: 'warning',
+    allow_dismiss: true,
+    placement: {
+      from: "bottom",
+      align: "center"
+    }
+  });
 }
 
-function ldap_by_login(q_login) {
-    $.getJSON("/api/ldap/bylogin/" + q_login, function (infos) {
-      if (infos != undefined && infos.IsArray()) {
+function ldap_by_rfid(q_rfid, success) {
+    $.getJSON("/api/ldap/byrfid/" + q_rfid, function (infos) {
+      if (infos == null) {
+        warn('LDAP Search RFID returned nothing');
+        return ;
+      }
+      if (infos.length > 0) {
         $("#ldap_cn").text(infos[0]['cn']);
         $("#ldap_dn").text(infos[0]['dn']);
         $("#ldap_rfid").text(infos[0]['badgerfid']);
         $("#ldap_pin").text(infos[0]['badgepin']);
+        if (success != null) {
+          success();
+        }
       }
     });
 }
 
-function  tac_by_rfid(q_rfid) {
+function ldap_by_login(q_login, success) {
+    $.getJSON("/api/ldap/bylogin/" + q_login, function (infos) {
+      if (infos == null) {
+        warn('LDAP Search LOGIN returned nothing');
 
-    $.getJSON("/api/tac/user/byrfid/" + q_rfid, function (data) {
-      if (data['id'] != "") {
+	tac_by_email(q_login + "@", null);
+
+        return ;
+      }
+      if (infos.length > 0) {
+        $("#ldap_cn").text(infos[0]['cn']);
+        $("#ldap_dn").text(infos[0]['dn']);
+        $("#ldap_rfid").text(infos[0]['badgerfid']);
+        $("#ldap_pin").text(infos[0]['badgepin']);
+	if ($("#p_rfid").text() == "") {
+	  $("#p_rfid").text(infos[0]['badgerfid']);
+	}
+	if (success != null) {
+	  success();
+	}
+      }
+    });
+}
+
+function fill_tac_data(data) {
+
         $("#p_name").text(data['name']);
         $("#p_company").text(data['company']);
 
@@ -51,62 +87,115 @@ function  tac_by_rfid(q_rfid) {
 	  var ids = tags.map(p => formatTag(p.id));
 	  $("#ca_tags").html(ids.join(", "));
 	});
+
+}
+
+function  tac_by_email(q_email, success) {
+  if (q_email.length < 4)
+  {
+    warn('TAC Search LOGIN is too short');
+    return ;
+  }
+    
+  $.getJSON("/api/tac/user/byemail/" + q_email, function (data) {
+      if ((data == null) || (data[0]['id'] == null)) {
+        warn('TAC Search LOGIN returned nothing');
+        return ;
       }
+      else
+      {
+	i = 0;
+	while (data[i] != null) {
+	  var j = i;
+          $.getJSON("/api/tac/user/byid/" + data[i]['id'], function (infos) {
+            if (infos['email'].substring(0, q_email.length) == q_email) {
+              fill_tac_data(data[j]);
+            }
+	  });
+          i++;
+	}
+	if (success != null) {
+	  success();
+	}
+      }
+  });
+}
+
+
+
+function  tac_by_rfid(q_rfid, success) {
+    $.getJSON("/api/tac/user/byrfid/" + q_rfid, function (data) {
+      if ((data == null) || (data['id'] == null)) {
+        warn('TAC Search RFID returned nothing');
+        return ;
+      }
+      else
+      {
+        fill_tac_data(data);
+	if (success != null) {
+	  success();
+	}
+      }
+  });
+}
+
+function l(l) {
+  $("#auto").html("");
+  $("#login").val(l);
+  submitForm();
+}
+
+function auto_complete(q) {
+  $.getJSON("/api/ldap/autocomplete/" + q, function (data) {
+    if (data != null) {
+      $("#auto").html("");
+      for (i = 0; data[i] != null; i++) {
+        tmp = data[i]['dn'].split(",")[0].split("=")[1];
+        $("#auto").append("<span onclick=\"l('" + tmp + "')\">" + data[i]['cn'] + " <b>" + tmp + "</b></span><br />\n");
+      }
+    }
   });
 }
 
 $(function () {
 
-  $.ajaxSetup({
-    async: false
+  $(".form-control").keydown(function(e) {
+    if (e.which == 13)
+    {
+      e.preventDefault();
+      submitForm();
+    }
+    return true;
+  });
+  $("#login").keyup(function(e) {
+    {
+      if (e.which != 13) {
+        // auto complete
+        v = $("#login").val().trim();
+        if (v.length > 5) {
+          auto_complete(v);
+        }
+      }
+    }
+    return true;
   });
 
   if (login != "") {
-    ldap_by_login(login);
-    rfid = $("#ldap_rfid").text();
-    if (rfid != "") {
-      tac_by_rfid(rfid);
-    }
+    ldap_by_login(login, function () {
+      rfid = $("#ldap_rfid").text();
+      if (rfid != "") {
+        tac_by_rfid(rfid, null);
+      }
+    });
   }
 
   if (rfid != "") {
     $("#p_rfid").text(rfid);
-
-    $.getJSON("/api/tac/user/byrfid/" + rfid, function (data) {
-      if (data['id'] != "") {
-        $("#p_name").text(data['name']);
-        $("#p_company").text(data['company']);
-
-        $("#ca_id").text(data['id']);
-        $("#ca_name").text(data['name']);
-        $("#ca_company").text(data['company']);
-
-	$.getJSON("/api/tac/user/byid/" + data['id'], function (infos) {
-	  $("#p_email").text(infos['email']);
-	  $("#ca_email").text(infos['email']);
-	  tmp = infos['email'].split("@");
-	  login = tmp[0];
-	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
-	});
-	$.getJSON("/api/tac/profile/byid/" + data['id'], function (profiles) {
-	  //alert(profiles);
-	  var names = profiles.map(p => p.name);
-	  $("#ca_profiles").text(names.join(", "));
-	});
-	$.getJSON("/api/tac/tags/byid/" + data['id'], function (tags) {
-	  var ids = tags.map(p => formatTag(p.id));
-	  $("#ca_tags").html(ids.join(", "));
-	});
-	$.getJSON("/api/ldap/byrfid/" + rfid, function (infos) {
-	  $("#ldap_cn").text(infos[0]['cn']);
-	  $("#ldap_dn").text(infos[0]['dn']);
-	  $("#ldap_rfid").text(infos[0]['badgerfid']);
-	  $("#ldap_pin").text(infos[0]['badgepin']);
-	});
-      }
-    });
-
+    tac_by_rfid(rfid, null);
+    ldap_by_rfid(rfid, null);
   }
+
+
 });
 
 function formatTag(tag) {
@@ -117,8 +206,12 @@ function formatTag(tag) {
 }
 
 function submitForm() {
-  document.location.href = "/profile/rfid/" + $("#rfid").val().trim();
+  if ($("#login").val() != "")
+    document.location.href = "/profile/login/" + $("#login").val().trim();
+  else
+    document.location.href = "/profile/rfid/" + $("#rfid").val().trim();
 }
+
 
 </script>
 
@@ -133,7 +226,7 @@ function submitForm() {
 	  <h4 class="card-title">Search</h4>
 	</div>
 	<div class="card-body">
-	  <form method="get" action="/profile" onsubmit="submitForm();return false">
+	  <form id="search_form" method="get" action="/profile">
 	    <div class="form-group bmd-form-group">
               <label class="bmd-label-floating">RFID</label>
 	      <input id="rfid" type="text" class="form-control" value="{{.Rfid}}">
@@ -143,6 +236,7 @@ function submitForm() {
 	      <input id="login" type="text" class="form-control" value="{{.Login}}">
 	    </div>
 	  </form>
+	  <p id="auto"></p>
 	</div>
       </div>
     </div>

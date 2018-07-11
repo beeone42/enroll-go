@@ -52,6 +52,17 @@ function ldap_by_login(q_login, success) {
         $("#ldap_dn").text(infos[0]['dn']);
         $("#ldap_rfid").text(infos[0]['badgerfid']);
         $("#ldap_pin").text(infos[0]['badgepin']);
+	if ($("#p_name").text() == "") {
+	  $("#p_name").text(infos[0]['cn']);
+	}
+	if ($("#p_company").text() == "") {
+	  $("#p_company").text(infos[0]['dn'].split(",")[1].split("=")[1]);
+	}
+	if ($("#p_email").text() == "") {
+	  $("#p_email").text(infos[0]['alias']);
+  	  login = infos[0]['alias'].split("@")[0];
+	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
+	}
 	if ($("#p_rfid").text() == "") {
 	  $("#p_rfid").text(infos[0]['badgerfid']);
 	}
@@ -74,8 +85,7 @@ function fill_tac_data(data) {
 	$.getJSON("/api/tac/user/byid/" + data['id'], function (infos) {
 	  $("#p_email").text(infos['email']);
 	  $("#ca_email").text(infos['email']);
-	  tmp = infos['email'].split("@");
-	  login = tmp[0];
+	  login = infos['email'].split("@")[0];
 	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
 	});
 	$.getJSON("/api/tac/profile/byid/" + data['id'], function (profiles) {
@@ -145,15 +155,33 @@ function l(l) {
   submitForm();
 }
 
+function auto_complete_sort(a, b) {
+  f = 'cn';
+  return (a[f] == b[f] ? 0 : (a[f] > b[f] ? 1 : -1));
+}
+
 function auto_complete(q) {
+
+  if (q.length < 5) {
+    $("#auto").html("need more chars to complete <b>" + q + "</b>");
+    return ;
+  }
+
   $.getJSON("/api/ldap/autocomplete/" + q, function (data) {
     if (data != null) {
+      data.sort(auto_complete_sort);
       $("#auto").html("");
       for (i = 0; data[i] != null; i++) {
         tmp = data[i]['dn'].split(",")[0].split("=")[1];
-        $("#auto").append("<span onclick=\"l('" + tmp + "')\">" + data[i]['cn'] + " <b>" + tmp + "</b></span><br />\n");
+        $("#auto").append("<span onclick=\"l('" + tmp + "')\">" + data[i]['cn'] + " <b>" + data[i]['dn'] + "</b></span><br />\n");
       }
     }
+    else
+    {
+	$("#auto").html("no match for <b>" + q + "</b>");
+    }
+  }).fail(function() {
+    $("#auto").html("query failed for <b>" + q + "</b>");
   });
 }
 
@@ -172,9 +200,7 @@ $(function () {
       if (e.which != 13) {
         // auto complete
         v = $("#login").val().trim();
-        if (v.length > 5) {
-          auto_complete(v);
-        }
+	auto_complete(v);
       }
     }
     return true;
@@ -233,10 +259,10 @@ function submitForm() {
 	    </div>
 	    <div class="form-group bmd-form-group">
               <label class="bmd-label-floating">LOGIN</label>
-	      <input id="login" type="text" class="form-control" value="{{.Login}}">
+	      <input id="login" type="text" class="form-control" value="{{.Login}}" autocomplete="off">
 	    </div>
 	  </form>
-	  <p id="auto"></p>
+	  <p id="auto" style="cursor: pointer;"></p>
 	</div>
       </div>
     </div>

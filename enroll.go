@@ -57,6 +57,17 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func login(w http.ResponseWriter, r *http.Request) {
+	p := Page{conf, "Enroll Login", "", "", ""}
+	t := template.New("Enroll")
+	t = template.Must(t.ParseFiles("tmpl/login.tmpl"))
+	err := t.ExecuteTemplate(w, "login", p)
+	if err != nil {
+		log.Fatalf("Template execution: %s", err)
+	}
+
+}
+
 func searchProfile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	p := Page{conf, "Profile", "profile", vars["rfid"], vars["login"]}
@@ -67,6 +78,11 @@ func searchProfile(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Template execution: %s", err)
 	}
 
+}
+
+func apiLogin(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "%s", "{\"res\": \"ok\"}")
+	return
 }
 
 func apiGetUserByRfid(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +137,7 @@ func ldapSearchByLogin(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("search: ", search)
 	entries, err := ld.Search(search)
 	if err != nil {
+		fmt.Println("%s", err)
 		fmt.Fprintf(w, "%s", err)
 		return
 	}
@@ -169,16 +186,21 @@ func main() {
 
 	tac.SetCredentials(conf.CaUrl, conf.CaUser, conf.CaPass)
 
-	ld.Connect(conf)
+	ld.Init(conf)
+	ld.Connect()
 	if ld.conn != nil {
-		defer ld.conn.Close()
+		defer ld.Close()
+	} else {
+		fmt.Println("LDAP Connect failed !")
 	}
 
 	r.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", http.FileServer(http.Dir("assets/"))))
 	r.HandleFunc("/", dashboard)
+	r.HandleFunc("/login", login)
 	r.HandleFunc("/profile", searchProfile)
 	r.HandleFunc("/profile/rfid/{rfid}", searchProfile)
 	r.HandleFunc("/profile/login/{login}", searchProfile)
+	r.HandleFunc("/api/login", apiLogin)
 	r.HandleFunc("/api/ldap/bylogin/{login}", ldapSearchByLogin)
 	r.HandleFunc("/api/ldap/byrfid/{rfid}", ldapSearchByRfid)
 	r.HandleFunc("/api/ldap/autocomplete/{query}", ldapAutocomplete)
@@ -188,6 +210,11 @@ func main() {
 	r.HandleFunc("/api/tac/profile/byid/{id}", apiGetProfileById)
 	r.HandleFunc("/api/tac/tags/byid/{id}", apiGetTagsById)
 
-	fmt.Printf("Listening http://localhost:8080/\n")
-	http.ListenAndServe(":8080", r)
+	port := os.Getenv("PORT")
+	if len(port) == 0 {
+		port = "8080"
+	}
+
+	fmt.Printf("Listening http://localhost:" + port + "/\n")
+	http.ListenAndServe(":"+port, r)
 }

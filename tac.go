@@ -9,6 +9,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"regexp"
+	"time"
 )
 
 type Tac struct {
@@ -18,6 +19,7 @@ type Tac struct {
 	cookie   http.Cookie
 	jar      *cookiejar.Jar
 	loggedOn bool
+	last     time.Time
 }
 
 type TacUserProfil struct {
@@ -52,6 +54,7 @@ func (t *Tac) SetCredentials(tac_url, login, passwd string) {
 	t.passwd = passwd
 	t.loggedOn = false
 	t.jar, _ = cookiejar.New(nil)
+	t.last = time.Now()
 	fmt.Printf("url: %s...\n", t.url)
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 }
@@ -108,11 +111,15 @@ func (t *Tac) ReverseTag(tag string) string {
 }
 
 func (t *Tac) Login() {
+	d := time.Since(t.last).Seconds()
+	if d > 30 {
+		t.loggedOn = false
+	}
 	if t.loggedOn {
 		return
 	}
 
-	fmt.Printf("login in...\n")
+	fmt.Printf("TAC login in...\n")
 	fmt.Printf("get %s\n", t.url)
 
 	client := &http.Client{
@@ -140,6 +147,7 @@ func (t *Tac) Login() {
 		return
 	}
 	fmt.Println(resp2.Status)
+	t.last = time.Now()
 	t.loggedOn = true
 	return
 }

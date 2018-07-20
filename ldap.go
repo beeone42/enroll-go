@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopkg.in/ldap.v2"
+	"time"
 )
 
 type Ldap struct {
@@ -12,15 +13,28 @@ type Ldap struct {
 	bindPass string
 	baseDn   string
 	conn     *ldap.Conn
+	last     time.Time
 }
 
-func (l *Ldap) Connect(conf Configuration) (*ldap.Conn, error) {
-
+func (l *Ldap) Init(conf Configuration) {
 	l.server = conf.LdapServer
 	l.bindUser = conf.LdapBind
 	l.bindPass = conf.LdapPassword
 	l.baseDn = conf.LdapBaseDn
+	l.last = time.Now()
+}
 
+func (l *Ldap) Connect() (*ldap.Conn, error) {
+	d := time.Since(l.last).Seconds()
+	//fmt.Println("LDAP link idle for ", d)
+	if d > 30 {
+		//fmt.Println("LDAP link too old")
+		l.Close()
+	}
+	if l.conn != nil {
+		return l.conn, nil
+	}
+	//fmt.Println("LDAP Connect")
 	conn, err := ldap.Dial("tcp", l.server)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect. %s", err)
@@ -28,8 +42,18 @@ func (l *Ldap) Connect(conf Configuration) (*ldap.Conn, error) {
 	if err := conn.Bind(l.bindUser, l.bindPass); err != nil {
 		return nil, fmt.Errorf("Failed to bind. %s", err)
 	}
+	l.last = time.Now()
 	l.conn = conn
 	return conn, nil
+}
+
+func (l *Ldap) Close() {
+	if l.conn == nil {
+		return
+	}
+	fmt.Println("LDAP Close")
+	l.conn.Close()
+	l.conn = nil
 }
 
 func (l *Ldap) MapEntry(entry *ldap.Entry) map[string]string {
@@ -70,6 +94,7 @@ func (l *Ldap) JsonEntries(entries []*ldap.Entry) string {
 }
 
 func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
+	l.Connect()
 	searchRequest := ldap.NewSearchRequest(
 		l.baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
@@ -80,7 +105,10 @@ func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
 	)
 	sr, err := l.conn.Search(searchRequest)
 	if err != nil {
+		fmt.Println("%s", err)
+		l.Close()
 		return nil, err
 	}
+	l.last = time.Now()
 	return sr.Entries, nil
 }

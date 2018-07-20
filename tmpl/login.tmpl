@@ -1,0 +1,116 @@
+{{define "login"}}<!doctype html>
+<html lang="en">
+  <head>
+    <title>{{.Title}}</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, shrink-to-fit=no" name="viewport" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <!--     Fonts and icons     -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:400,700|Material+Icons" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css" />
+    <!-- Material Dashboard CSS -->
+    <link rel="stylesheet" href="/assets/css/material-dashboard.css">
+    <script src="/assets/js/core/jquery.min.js"></script>
+    <script>
+
+$(function() {
+
+  $("#submitForm").click(function(){
+    l = $("#f_login").val();
+    p = $("#f_password").val();
+    $.post("/api/login", { login: l, passwd: p }, function(data) {
+      alert(data);
+    });
+  });
+
+});
+
+    </script>
+  </head>
+  <body class="off-canvas-sidebar">
+    <!-- Navbar -->
+      <nav class="navbar navbar-expand-lg navbar-transparent navbar-absolute fixed-top text-white" id="navigation-example">
+        <div class="container">
+          <div class="navbar-wrapper">
+            <a class="navbar-brand" href="#pablo">Enroll</a>
+          </div>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" aria-controls="navigation-index" aria-expanded="false" aria-label="Toggle navigation" data-target="#navigation-example">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="navbar-toggler-icon icon-bar"></span>
+            <span class="navbar-toggler-icon icon-bar"></span>
+            <span class="navbar-toggler-icon icon-bar"></span>
+          </button>
+          <div class="collapse navbar-collapse justify-content-end">
+            <ul class="navbar-nav">
+              <li class= "nav-item  active ">
+                <a href="/login" class="nav-link">
+                  <i class="material-icons">fingerprint</i>
+                  Login
+               </a>
+             </li>
+           </div>
+         </div>
+       </nav>
+<!-- End Navbar -->
+
+      <div class="wrapper wrapper-full-page">
+        <div class="page-header login-page header-filter" filter-color="black" style="background-image: url('../../assets/img/login.jpg'); background-size: cover; background-position: top center; min-height: 100vh; display: flex; align-items:center">
+          <div class="container">
+            <div class="col-lg-4 col-md-6 col-sm-6 ml-auto mr-auto">
+              <form class="form" method="" action="">
+                <div class="card card-login">
+                  <div class="card-header card-header-rose text-center">
+                    <h4 class="card-title">Login</h4>
+	          </div>
+                  <div class="card-body ">
+                    <span class="bmd-form-group">
+                      <div class="input-group">
+                        <div class="input-group-prepend">
+                          <span class="input-group-text">
+                            <i class="material-icons">face</i>
+                          </span>
+                        </div>
+                        <input id="f_login" name="login" type="text" class="form-control" placeholder="Login...">
+                      </div>
+                    </span>
+                    <span class="bmd-form-group">
+                      <div class="input-group">
+                        <div class="input-group-prepend">
+                          <span class="input-group-text">
+                            <i class="material-icons">lock_outline</i>
+                          </span>
+                        </div>
+                        <input id="f_password" name="password" type="password" class="form-control" placeholder="Password...">
+                      </div>
+                    </span>
+                  </div>
+                  <div class="card-footer justify-content-center">
+                    <a id="submitForm" href="#" class="btn btn-rose btn-link btn-lg">Lets Go</a>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <footer class="footer" >
+            <div class="container">
+              <nav class="float-left">
+              </nav>
+            </div>
+          </footer>
+
+        </div>
+      </div>
+    </div>
+    <!--   Core JS Files   -->
+    <script src="/assets/js/core/popper.min.js"></script>
+    <script src="/assets/js/bootstrap-material-design.js"></script>
+
+    <!-- Material Dashboard Core initialisations of plugins and Bootstrap Material Design Library -->
+    <script src="/assets/js/material-dashboard.js?v=2.0.0"></script>
+    <script src="/assets/js/plugins/bootstrap-notify.js?v=3.1.5"></script>
+
+  </body>
+</html>
+{{end}}

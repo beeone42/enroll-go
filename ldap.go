@@ -112,3 +112,15 @@ func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
 	l.last = time.Now()
 	return sr.Entries, nil
 }
+
+func (l *Ldap) Enroll(login string, rfid string) (string, error) {
+	l.Connect()
+	modify := ldap.NewModifyRequest("uid=sbenoit,ou=staff,ou=2014,ou=paris,ou=people,dc=42,dc=fr")
+	modify.Replace("badgeRfid", []string{rfid})
+	err := l.conn.Modify(modify)
+	if err != nil {
+		l.Close()
+		return "error", err
+	}
+	return "ok", err
+}

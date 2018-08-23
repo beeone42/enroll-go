@@ -173,6 +173,19 @@ func ldapAutocomplete(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func ldapEnroll(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	login := vars["login"]
+	rfid := vars["rfid"]
+	res, err := ld.Enroll(login, rfid)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+	fmt.Fprintf(w, "%s", res)
+	return
+}
+
 func main() {
 	r := mux.NewRouter()
 	tac = &Tac{}
@@ -204,6 +217,7 @@ func main() {
 	r.HandleFunc("/api/ldap/bylogin/{login}", ldapSearchByLogin)
 	r.HandleFunc("/api/ldap/byrfid/{rfid}", ldapSearchByRfid)
 	r.HandleFunc("/api/ldap/autocomplete/{query}", ldapAutocomplete)
+	r.HandleFunc("/api/ldap/enroll/{login}/{rfid}", ldapEnroll)
 	r.HandleFunc("/api/tac/user/byrfid/{rfid}", apiGetUserByRfid)
 	r.HandleFunc("/api/tac/user/byid/{id}", apiGetUserById)
 	r.HandleFunc("/api/tac/user/byemail/{email}", apiGetUsersByEmail)

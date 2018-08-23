@@ -20,6 +20,23 @@ function warn(msg)
   });
 }
 
+function info(msg)
+{
+  $.notify({
+    // options
+    message: msg
+  },{
+    // settings
+    type: 'success',
+    allow_dismiss: true,
+    placement: {
+      from: "bottom",
+      align: "center"
+    }
+  });
+}
+
+
 function ldap_by_rfid(q_rfid, success) {
     $.getJSON("/api/ldap/byrfid/" + q_rfid, function (infos) {
       if (infos == null) {
@@ -187,7 +204,36 @@ function auto_complete(q) {
 
 $(function () {
 
-  $(".form-control").keydown(function(e) {
+  $("#enroll_rfid").keydown(function(e) {
+    if (e.which == 13)
+    {
+      e.preventDefault();
+      e.stopPropagation();
+
+      e_login = $("#login").val().trim();
+      e_rfid = $("#enroll_rfid").val().trim();
+
+      $("#enroll_rfid").focus();
+      $("#enroll_rfid").select();
+
+
+      if (e_login == "")
+      {
+      	warn('Empty login');
+      	return false
+      }
+      if (e_rfid.length != 10)
+      {
+      	warn('Invalid RFID ' + e_rfid);
+      	return false
+      }
+
+      info("update " + e_login + ".rfid = " + e_rfid);
+
+    }
+  });
+  
+  $(".form-control").keypress(function(e) {
     if (e.which == 13)
     {
       e.preventDefault();
@@ -195,12 +241,13 @@ $(function () {
     }
     return true;
   });
+  
   $("#login").keyup(function(e) {
     {
       if (e.which != 13) {
         // auto complete
         v = $("#login").val().trim();
-	auto_complete(v);
+	    auto_complete(v);
       }
     }
     return true;
@@ -242,30 +289,39 @@ function submitForm() {
 </script>
 
 <div class="container-fluid">
+
+  <!-- 1ERE LIGNE -->
+
   <div class="row">
+
+    <!-- search panel -->
+
     <div class="col-md-6">
       <div class="card">
       	<div class="card-header card-header-icon card-header-primary">
-	  <div class="card-icon">
-	    <i class="material-icons">face</i>
-	  </div>
-	  <h4 class="card-title">Search</h4>
-	</div>
-	<div class="card-body">
-	  <form id="search_form" method="get" action="/profile">
-	    <div class="form-group bmd-form-group">
+		  <div class="card-icon">
+		    <i class="material-icons">search</i>
+		  </div>
+		  <h4 class="card-title">Search</h4>
+		</div>
+		<div class="card-body">
+		  <form id="search_form" method="get" action="/profile">
+		    <div class="form-group bmd-form-group">
               <label class="bmd-label-floating">RFID</label>
-	      <input id="rfid" type="text" class="form-control" value="{{.Rfid}}">
-	    </div>
-	    <div class="form-group bmd-form-group">
+		      <input id="rfid" type="text" class="form-control" value="{{.Rfid}}" />
+		    </div>
+		    <div class="form-group bmd-form-group">
               <label class="bmd-label-floating">LOGIN</label>
-	      <input id="login" type="text" class="form-control" value="{{.Login}}" autocomplete="off">
-	    </div>
-	  </form>
-	  <p id="auto" style="cursor: pointer;"></p>
-	</div>
+		      <input id="login" type="text" class="form-control" value="{{.Login}}" autocomplete="off" />
+		    </div>
+		  </form>
+		  <p id="auto" style="cursor: pointer;"></p>
+		</div>
       </div>
     </div>
+
+    <!-- info panel -->
+
     <div class="col-md-6">
       <div class="card card-profile">
         <div class="card-avatar">
@@ -308,6 +364,9 @@ function submitForm() {
       </div>
     </div>
   </div>
+
+  <!-- 2EME LIGNE -->
+
   <div class="row">
   
   <!-- reponses du CA -->
@@ -378,51 +437,79 @@ function submitForm() {
     <div class="col-md-6">
       <div class="card">
       	<div class="card-header card-header-icon card-header-primary">
-	  <div class="card-icon">
-	    <i class="material-icons">storage</i>
-	  </div>
-	  <h4 class="card-title">LDAP</h4>
-	</div>
-	<div class="card-body">
-	  <!-- LDAP cn -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text">
- 	        <i class="material-icons">face</i>
+		  <div class="card-icon">
+		    <i class="material-icons">storage</i>
+		  </div>
+		  <h4 class="card-title">LDAP</h4>
+		</div>
+		<div class="card-body">
+		  <!-- LDAP cn -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">face</i>
+	          </span>
+		    </div>
+		    <span id="ldap_cn"></span>
+		  </div>
+		  <!-- LDAP dn -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">list_alt</i>
               </span>
-	    </div>
-	    <span id="ldap_cn"></span>
-	  </div>
-	  <!-- LDAP dn -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text">
- 	        <i class="material-icons">list_alt</i>
+		    </div>
+		    <span id="ldap_dn"></span>
+		  </div>
+		  <!-- LDAP rfid -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">credit_card</i>
               </span>
-	    </div>
-	    <span id="ldap_dn"></span>
-	  </div>
-	  <!-- LDAP rfid -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text">
- 	        <i class="material-icons">credit_card</i>
+		    </div>
+		    <span id="ldap_rfid"></span>
+		  </div>
+		  <!-- LDAP pin -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">fiber_pin</i>
               </span>
-	    </div>
-	    <span id="ldap_rfid"></span>
-	  </div>
-	  <!-- LDAP pin -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text">
- 	        <i class="material-icons">fiber_pin</i>
-              </span>
-	    </div>
-	    <span id="ldap_pin"></span>
-	  </div>
-	</div>
+		    </div>
+		    <span id="ldap_pin"></span>
+		  </div>
+		</div>
       </div>
     </div>
   </div>
+
+  <!-- 3EME LIGNE -->
+
+  <div class="row">
+
+    <!-- update ldap rfid panel -->
+
+    <div class="col-md-12">
+      <div class="card">
+      	<div class="card-header card-header-icon card-header-primary">
+		  <div class="card-icon">
+		    <i class="material-icons">how_to_reg</i>
+		  </div>
+		  <h4 class="card-title">Update LDAP RFID</h4>
+		</div>
+		<div class="card-body">
+		  <form>
+		    <div class="form-group bmd-form-group">
+              <label class="bmd-label-floating">RFID</label>
+		      <input id="enroll_rfid" type="text" class="form-control" />
+		    </div>
+		  </form>
+		</div>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 {{end}}

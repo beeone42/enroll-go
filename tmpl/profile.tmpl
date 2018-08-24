@@ -228,7 +228,14 @@ $(function () {
       	return false
       }
 
-      info("update " + e_login + ".rfid = " + e_rfid);
+      $.get("/api/ldap/enroll/" + e_login + "/" + e_rfid, function (data) {
+	      info("update " + e_login + ".rfid = " + e_rfid);
+	      setTimeout(function(){ document.location.href = "/profile/login/" + $("#login").val().trim(); }, 1000)
+	      
+      }).fail(
+       function () {
+      	warn("update failed");
+      });
 
     }
   });

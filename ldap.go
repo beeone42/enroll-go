@@ -34,9 +34,11 @@ func (l *Ldap) Connect() (*ldap.Conn, error) {
 	if l.conn != nil {
 		return l.conn, nil
 	}
-	//fmt.Println("LDAP Connect")
+	l.conn = nil
+	fmt.Println("LDAP Connect")
 	conn, err := ldap.Dial("tcp", l.server)
 	if err != nil {
+		fmt.Println("LDAP Connect FAIL")
 		return nil, fmt.Errorf("Failed to connect. %s", err)
 	}
 	if err := conn.Bind(l.bindUser, l.bindPass); err != nil {
@@ -122,5 +124,5 @@ func (l *Ldap) Enroll(login string, rfid string) (string, error) {
 		l.Close()
 		return "error", err
 	}
-	return "ok", err
+	return "ok", nil
 }

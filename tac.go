@@ -51,11 +51,14 @@ type TacLastTagRead struct {
 	ID     string `json:"id"`
 	Type   string `json:"type"`
 	Tag    string `json:"tag"`
+	Rfid   string
+	Pin    string
 	PID    string
 	UserID struct {
 		UserID string `json:"user_id"`
 	} `json:"user_id"`
-	Infos TacUserInfos
+	Tac TacUserInfos
+	Ldap []map[string]string
 }
 
 func (t *Tac) SetCredentials(tac_url, login, passwd string) {
@@ -240,6 +243,12 @@ func (t *Tac) GetLastTagRead(porte_id, event_id string) (code int, lt TacLastTag
 	err := json.Unmarshal([]byte(res), &lt)
 	if err != nil {
 		fmt.Println("json decode error: %s", err.Error())
+	}
+	if len(lt.Rfid) >= 10 {
+		lt.Rfid = t.ReverseTag(lt.Tag[0:10])
+	}
+	if len(lt.Rfid) == 14 {
+		lt.Pin = t.ReverseTag(lt.Tag[10:14])
 	}
 	lt.PID = porte_id
 	return code, lt

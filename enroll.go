@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"encoding/json"
+	"gopkg.in/ldap.v2"
 )
 
 var tac *Tac
@@ -34,6 +35,7 @@ type Page struct {
 	Section string
 	Rfid    string
 	Login   string
+	Sipass  string
 }
 
 func sendFile(w http.ResponseWriter, f string) {
@@ -48,7 +50,7 @@ func sendFile(w http.ResponseWriter, f string) {
 }
 
 func dashboard(w http.ResponseWriter, r *http.Request) {
-	p := Page{conf, "Enroll", "", "", ""}
+	p := Page{conf, "Enroll", "", "", "", ""}
 	t := template.New("Enroll")
 	t = template.Must(t.ParseFiles("tmpl/layout.tmpl", "tmpl/dashboard.tmpl"))
 	err := t.ExecuteTemplate(w, "layout", p)
@@ -59,7 +61,7 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-	p := Page{conf, "Enroll Login", "", "", ""}
+	p := Page{conf, "Enroll Login", "", "", "", ""}
 	t := template.New("Enroll")
 	t = template.Must(t.ParseFiles("tmpl/login.tmpl"))
 	err := t.ExecuteTemplate(w, "login", p)
@@ -69,9 +71,20 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func sipass(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	p := Page{conf, "Enroll sipass", "", "", "", vars["sipass"]}
+	t := template.New("Enroll")
+	t = template.Must(t.ParseFiles("tmpl/layout.tmpl", "tmpl/sipass.tmpl"))
+	err := t.ExecuteTemplate(w, "layout", p)
+	if err != nil {
+		log.Fatalf("Template execution: %s", err)
+	}
+}
+
 func searchProfile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	p := Page{conf, "Profile", "profile", vars["rfid"], vars["login"]}
+	p := Page{conf, "Profile", "profile", vars["rfid"], vars["login"], ""}
 	t := template.New("User Profile")
 	t = template.Must(t.ParseFiles("tmpl/layout.tmpl", "tmpl/profile.tmpl"))
 	err := t.ExecuteTemplate(w, "layout", p)
@@ -163,6 +176,8 @@ func apiGetLastTagReadEx(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
+	var entries []*ldap.Entry
+
 	vars := mux.Vars(r)
 	porte_id := vars["pid"]
 	event_id := vars["eid"]
@@ -171,16 +186,27 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 	_, lt := tac.GetLastTagRead(porte_id, event_id)
 	_, infos := tac.GetUserById(lt.UserID.UserID)
 	fmt.Println("%#v", infos)
-	err := json.Unmarshal([]byte(infos), &lt.Infos)
+	err := json.Unmarshal([]byte(infos), &lt.Tac)
 	if err != nil {
 		fmt.Fprintf(w, "{\"result\":\"error\"}")
 	}
+
+	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", lt.Rfid, -1)
+	fmt.Println("ldap search rfid: ", search)
+
+	entries, err = ld.Search(search)
+	for _, entry := range entries {
+		lt.Ldap = append(lt.Ldap, ld.MapEntry(entry))
+	}
+
 	res, _ := json.Marshal(lt)
 	fmt.Fprintf(w, "%s", res)
 	return
 }
 
 func apiGetLastTagReadInfosEx(w http.ResponseWriter, r *http.Request) {
+	var entries []*ldap.Entry
+
 	vars := mux.Vars(r)
 	porte_id1 := vars["pid1"]
 	porte_id2 := vars["pid2"]
@@ -190,10 +216,19 @@ func apiGetLastTagReadInfosEx(w http.ResponseWriter, r *http.Request) {
 	_, lt := tac.GetLastTagReadEx(porte_id1, porte_id2, event_id)
 	_, infos := tac.GetUserById(lt.UserID.UserID)
 	fmt.Println("%#v", infos)
-	err := json.Unmarshal([]byte(infos), &lt.Infos)
+	err := json.Unmarshal([]byte(infos), &lt.Tac)
 	if err != nil {
 		fmt.Fprintf(w, "{\"result\":\"error\"}")
 	}
+
+	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", lt.Rfid, -1)
+	fmt.Println("ldap search rfid: ", search)
+
+	entries, err = ld.Search(search)
+	for _, entry := range entries {
+		lt.Ldap = append(lt.Ldap, ld.MapEntry(entry))
+	}
+
 	res, _ := json.Marshal(lt)
 	fmt.Fprintf(w, "%s", res)
 	return
@@ -296,6 +331,8 @@ func main() {
 	r.HandleFunc("/api/tac/tags/bypids/{pid1}/{pid2}/{eid}", apiGetLastTagReadEx)
 	r.HandleFunc("/api/tac/events/bypid/{pid}/{eid}", apiGetLastTagReadInfos)
 	r.HandleFunc("/api/tac/events/bypids/{pid1}/{pid2}/{eid}", apiGetLastTagReadInfosEx)
+	r.HandleFunc("/sipass", sipass)
+	r.HandleFunc("/sipass/{sipass}", sipass)
 
 	port := os.Getenv("PORT")
 	if len(port) == 0 {

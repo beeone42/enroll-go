@@ -130,6 +130,27 @@ func apiGetUsersByEmail(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func apiGetLastTagRead(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	porte_id := vars["pid"]
+	event_id := vars["eid"]
+	tac.Login()
+	_, body := tac.GetLastTagRead(porte_id, event_id)
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
+func apiGetLastTagReadEx(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	porte_id1 := vars["pid1"]
+	porte_id2 := vars["pid2"]
+	event_id := vars["eid"]
+	tac.Login()
+	_, body := tac.GetLastTagReadEx(porte_id1, porte_id2, event_id)
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
 func ldapSearchByLogin(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	login := vars["login"]
@@ -223,6 +244,8 @@ func main() {
 	r.HandleFunc("/api/tac/user/byemail/{email}", apiGetUsersByEmail)
 	r.HandleFunc("/api/tac/profile/byid/{id}", apiGetProfileById)
 	r.HandleFunc("/api/tac/tags/byid/{id}", apiGetTagsById)
+	r.HandleFunc("/api/tac/events/bypid/{pid}/{eid}", apiGetLastTagRead)
+	r.HandleFunc("/api/tac/events/bypids/{pid1}/{pid2}/{eid}", apiGetLastTagReadEx)
 
 	port := os.Getenv("PORT")
 	if len(port) == 0 {

@@ -233,75 +233,24 @@ func (t *Tac) GetUsersByEmail(email string) (code int, body string) {
 	return code, res
 }
 
-func (t *Tac) GetLastTagRead(porte_id, event_id string) (code int, body string) {
-	var lt TacLastTagRead
+func (t *Tac) GetLastTagRead(porte_id, event_id string) (code int, lt TacLastTagRead) {
+	var body string
 	code, body = t.Request("taction_get_last_tag_read", []string{porte_id, event_id})
 	res := t.ParseResponse(body)
 	err := json.Unmarshal([]byte(res), &lt)
 	if err != nil {
 		fmt.Println("json decode error: %s", err.Error())
-	} else {
-		lt.PID = porte_id
-		_, infos := t.GetUserById(lt.UserID.UserID)
-		fmt.Println("%#v", infos)
-		err = json.Unmarshal([]byte(infos), &lt.Infos)
-		if err != nil {
-			fmt.Println("json decode error: %s", err.Error())
-		} else {
-				xres, err2 := json.Marshal(lt)
-				if err2 == nil {
-					res = string(xres)
-				}
-		}
 	}
-	fmt.Println("%#v", lt)
-	return code, res
+	lt.PID = porte_id
+	return code, lt
 }
 
-func (t *Tac) GetLastTagReadEx(porte_id1, porte_id2, event_id string) (code int, body string) {
-	var lt, lt1, lt2 TacLastTagRead
-	var res, res1, res2 string
-	var code1, code2 int
-	var body1, body2 string
-
-	code1, body1 = t.Request("taction_get_last_tag_read", []string{porte_id1, event_id})
-	res1 = t.ParseResponse(body1)
-	err1 := json.Unmarshal([]byte(res1), &lt1)
-
-	if err1 != nil {
-		fmt.Println("json decode error: %s", err1.Error())
+func (t *Tac) GetLastTagReadEx(porte_id1, porte_id2, event_id string) (code int, lt TacLastTagRead) {
+	code1, lt1 := tac.GetLastTagRead(porte_id1, event_id)
+	code2, lt2 := tac.GetLastTagRead(porte_id2, event_id)
+	if lt1.ID > lt2.ID {
+		return code1, lt1
 	} else {
-		code2, body2 = t.Request("taction_get_last_tag_read", []string{porte_id2, event_id})
-		res2 = t.ParseResponse(body2)
-		err2 := json.Unmarshal([]byte(res2), &lt2)
-		if err2 != nil {
-			fmt.Println("json decode error: %s", err2.Error())
-		} else {
-			if (lt1.ID > lt2.ID) {
-				lt = lt1
-				lt.PID = porte_id1
-				res = res1
-				code = code1
-			} else {
-				lt = lt2
-				lt.PID = porte_id2
-				res = res2
-				code = code2
-			}
-			_, infos := t.GetUserById(lt.UserID.UserID)
-			fmt.Println("%#v", infos)
-			err := json.Unmarshal([]byte(infos), &lt.Infos)
-			if err != nil {
-				fmt.Println("json decode error: %s", err.Error())
-			} else {
-					xres, err2 := json.Marshal(lt)
-					if err2 == nil {
-						res = string(xres)
-					}
-			}
-		}
+		return code2, lt2
 	}
-
-	return code, res
 }
-

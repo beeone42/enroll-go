@@ -6,5 +6,18 @@
     "LdapServer":   "ldap.domain.com:389",
     "LdapBind":     "uid=enrollgo,ou=applications,ou=people,dc=domain,dc=com",
     "LdapPassword": "PaSsWoRd",
-    "LdapBaseDn":   "dc=domain,dc=com"
+    "LdapBaseDn":   "dc=domain,dc=com",
+    	"Sipass":	{	
+		"hall":	{
+			"cam":	"http://cam.domain.com/cam-hall.jpg",
+			"pid1":	"abcdef-1234-5678-entrance1",
+			"pid2":	"abcdef-1234-5678-entrance2"
+		},
+		"office":	{
+			"cam":	"http://cam.domain.com/cam-office.jpg",
+			"pid1":	"abcdef-1234-5678-office",
+			"pid2":	""
+		}
+	},
+	"SipassDefault":	"hall"
 }

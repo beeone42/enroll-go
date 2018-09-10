@@ -1,0 +1,166 @@
+{{define "content"}}
+<script src="/assets/js/tools.js"></script>
+<script>
+
+sipass = "{{.Sipass}}";
+conf = {{index .Conf.Sipass .Sipass}};
+
+var last_id = 0;
+
+var cam = conf.Cam
+var porte_id1 = conf.Pid1
+var porte_id2 = conf.Pid2
+
+// e489bace-68c4-11e3-ad63-3a1f34420001  // bocal
+// abcb29a2-d5ca-11e3-853e-3a1f34420001  // entree-1
+// d1e21178-d5ca-11e3-853e-3a1f34420001  // entree-2
+// 7d7fe094-d528-11e3-b492-3a1f34420001  // sortie-1
+// b3fd935a-d528-11e3-b492-3a1f34420001  // sortie-2
+
+
+function update_datas(porte_id1, porte_id2, event_id)
+{
+  d = new Date();
+  url = "/api/tac/events/bypids/" + porte_id1 + (porte_id2 != "" ? "/" + porte_id2 : "") + "/" + event_id;
+
+  $("#cam").attr("src", cam + "?" + d.getTime())
+
+  $.getJSON(url)
+  .done(function(data) {
+
+    if (data.id != last_id)
+    {
+      info("update");
+      $("#ca_name").text(data.Tac.prettyname);
+      $("#ca_company").text(data.Tac.company);
+      $("#ca_rfid").text(data.tag);
+      if (Array.isArray(data.Ldap) > 0) {
+        if (data.Pin == data.Ldap[0].badgepin) {
+          $("#ca_pin").text(data.Pin);
+        } else {
+          $("#ca_pin").text("<span style='color: red'>" + data.Pin + "</span><span style='color: green'>" + data.Ldap[0].badgepin + "</span>");
+        }
+      }
+      if (data.UID != "") {
+        $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + data.UID);
+      } else {
+        if (data.Tac.email != "") {
+          $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + data.Tac.email.split("@")[0])
+        }
+      }
+
+    }
+    last_id = data.id;
+  });
+}
+
+$(function () {
+    setInterval(function() { update_datas(porte_id1, porte_id2, 0) }, 1000);
+});
+
+
+</script>
+
+<div class="container-fluid">
+
+  <!-- 1ERE LIGNE -->
+
+  <div class="row">
+
+    <!-- cam panel -->
+
+    <div class="col-md-9">
+
+      <div class="card">
+        <div class="card-body" style="text-align: center">
+            <img id="cam" class="img" src="/assets/img/loading-stream.gif" width="100%">
+        </div>
+      </div>
+
+
+    </div>
+
+
+    <!-- search panel -->
+
+    <div class="col-md-3">
+
+      <div class="card">
+      	<div class="card-header card-header-icon card-header-primary">
+    		  <div class="card-icon">
+    		    <i class="material-icons">search</i>
+    		  </div>
+    		  <h4 class="card-title">{{.Sipass}}</h4>
+    		</div>
+    		<div class="card-body">
+
+          <!-- TAC name -->
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">
+                <i class="material-icons">face</i>
+              </span>
+            </div>
+            <span id="ca_name"></span>
+          </div>
+          <!-- TAC company -->
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">
+                <i class="material-icons">business</i>
+              </span>
+            </div>
+            <span id="ca_company"></span>
+          </div>
+          <!-- TAC id -->
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">
+                <i class="material-icons">credit_card</i>
+              </span>
+            </div>
+            <span id="ca_rfid"></span>
+          </div>
+          <!-- TAC pin -->
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">
+                <i class="material-icons">fiber_pin</i>
+              </span>
+            </div>
+            <span id="ca_pin"></span>
+          </div>
+
+
+
+          <!-- pic -->
+          <hr />
+          <div align="center">
+            <img id="avatar" class="img" src="/assets/img/faces/john.jpg" width="100%">
+          </div>
+
+     		</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 2EME LIGNE -->
+
+  <div class="row">
+    <div class="btn-group">
+{{ $sipass := .Sipass }}
+{{ range $key, $value := .Conf.Sipass }}
+      <button type="button" class="btn btn-round {{ if eq $key $sipass }}btn-info{{ else }}btn-primary{{ end }} btn-lg" onclick="go('/sipass/{{ $key }}')">{{ $key }}</button>
+{{end}}
+    </div>
+  </div>
+
+  <!-- 3EME LIGNE -->
+
+  <div class="row">
+
+  </div>
+
+</div>
+{{end}}

@@ -1,0 +1,45 @@
+
+function show_message(type, msg)
+{
+  $.notify({
+    // options
+    message: msg
+  },{
+    // settings
+    type: type,
+    allow_dismiss: true,
+    placement: {
+      from: "bottom",
+      align: "center"
+    }
+  });
+}
+
+function warn(msg)
+{
+  show_message("warning", msg)
+}
+
+function info(msg)
+{
+  show_message("success", msg)
+}
+
+function formatTag(tag) {
+  if (tag.length == 14) {
+    return (tag.substring(0, 10) + "<b>" + tag.substring(10, 14) + "</b>");
+  }
+  return (tag);
+}
+
+function reverseTag(tag) {
+  res = ""
+  for (i = 0; i < tag.length; i += 2) {
+    res = tag.substring(i, i + 2) + res;
+  }
+  return res
+}
+
+function go(dst) {
+  document.location.href = dst;
+}

@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"encoding/json"
 	"gopkg.in/ldap.v2"
@@ -17,6 +18,12 @@ import (
 var tac *Tac
 var ld *Ldap
 var conf Configuration
+
+type SipassConf struct {
+	Cam		string
+	Pid1 	string
+	Pid2 	string
+}
 
 type Configuration struct {
 	CaUrl        string
@@ -27,6 +34,8 @@ type Configuration struct {
 	LdapBind     string
 	LdapPassword string
 	LdapBaseDn   string
+	Sipass		 map[string]SipassConf
+	SipassDefault string
 }
 
 type Page struct {
@@ -78,7 +87,12 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 func sipass(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	p := Page{conf, "Enroll sipass", "sipass", "", "", vars["sipass"]}
+	sipass := vars["sipass"]
+	if sipass == "" {
+		sipass = conf.SipassDefault
+	}
+	fmt.Println("sipass: ", sipass)
+	p := Page{conf, "Enroll sipass", "sipass", "", "", sipass}
 	t := template.New("Enroll")
 	t = template.Must(t.ParseFiles("tmpl/layout.tmpl", "tmpl/sipass.tmpl"))
 	err := t.ExecuteTemplate(w, "layout", p)
@@ -184,6 +198,7 @@ func apiGetLastTagReadEx(w http.ResponseWriter, r *http.Request) {
 func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 	var entries []*ldap.Entry
 	var lt TacLastTagRead
+	var infos, search, r_rfid string
 
 	vars := mux.Vars(r)
 	porte_id1 := vars["pid"]
@@ -198,15 +213,28 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 		_, lt = tac.GetLastTagRead(porte_id1, event_id)
 	}
 
-	_, infos := tac.GetUserById(lt.UserID.UserID)
+	if len(lt.Rfid) >= 10 {
+		r_rfid = lt.Rfid[0:10]
+	} else {
+		r_rfid = lt.Rfid
+	}
+
+	userid, err := strconv.Atoi(lt.UserID.UserID)
+	if (userid > 0) {
+		_, infos = tac.GetUserById(lt.UserID.UserID)
+	} else {
+		_, infos = tac.GetUserByTag(r_rfid)
+	}
+
+
+
 	fmt.Println("%#v", infos)
-	err := json.Unmarshal([]byte(infos), &lt.Tac)
+	err = json.Unmarshal([]byte(infos), &lt.Tac)
 	if err != nil {
 		fmt.Fprintf(w, "{\"result\":\"error\"}")
 	}
 
-
-	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", lt.Rfid, -1)
+	search = strings.Replace("(badgeRfid={rfid})", "{rfid}", r_rfid, -1)
 	fmt.Println("ldap search rfid: ", search)
 
 	entries, err = ld.Search(search)
@@ -217,42 +245,6 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 	if lt.Ldap != nil {
 		lt.UID = strings.SplitN(strings.SplitN(lt.Ldap[0]["dn"], "uid=", 2)[1], ",", 2)[0]
 	}
-	res, _ := json.Marshal(lt)
-	fmt.Fprintf(w, "%s", res)
-	return
-}
-
-func apiGetLastTagReadInfosEx(w http.ResponseWriter, r *http.Request) {
-	var entries []*ldap.Entry
-
-	vars := mux.Vars(r)
-	porte_id1 := vars["pid1"]
-	porte_id2 := vars["pid2"]
-	event_id := vars["eid"]
-
-	tac.Login()
-	_, lt := tac.GetLastTagReadEx(porte_id1, porte_id2, event_id)
-	_, infos := tac.GetUserById(lt.UserID.UserID)
-	fmt.Println("%#v", infos)
-	err := json.Unmarshal([]byte(infos), &lt.Tac)
-	if err != nil {
-		fmt.Fprintf(w, "{\"result\":\"error\"}")
-	}
-
-	lt.UID = strings.SplitN(lt.Tac.Email, "@", 2)[0]
-
-	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", lt.Rfid, -1)
-	fmt.Println("ldap search rfid: ", search)
-
-	entries, err = ld.Search(search)
-	for _, entry := range entries {
-		lt.Ldap = append(lt.Ldap, ld.MapEntry(entry))
-	}
-
-	if lt.Ldap != nil {
-		lt.UID = strings.SplitN(strings.SplitN(lt.Ldap[0]["dn"], "uid=", 2)[1], ",", 2)[0]
-	}
-
 	res, _ := json.Marshal(lt)
 	fmt.Fprintf(w, "%s", res)
 	return
@@ -354,7 +346,7 @@ func main() {
 	r.HandleFunc("/api/tac/tags/byid/{id}", apiGetTagsById)
 	r.HandleFunc("/api/tac/tags/bypid/{pid}/{eid}", apiGetLastTagRead)
 	r.HandleFunc("/api/tac/tags/bypids/{pid1}/{pid2}/{eid}", apiGetLastTagReadEx)
-	r.HandleFunc("/api/tac/events/bypid/{pid}/{eid}", apiGetLastTagReadInfos)
+	r.HandleFunc("/api/tac/events/bypids/{pid}/{eid}", apiGetLastTagReadInfos)
 	r.HandleFunc("/api/tac/events/bypids/{pid}/{pid2}/{eid}", apiGetLastTagReadInfos)
 	r.HandleFunc("/sipass", sipass)
 	r.HandleFunc("/sipass/{sipass}", sipass)

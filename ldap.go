@@ -135,7 +135,7 @@ func (l *Ldap) Enroll(login string, rfid string) (string, error) {
 	if err != nil {
 		return "error", err
 	}
-	modify := ldap.NewModifyRequest(dn /*"uid=sbenoit,ou=staff,ou=2014,ou=paris,ou=people,dc=42,dc=fr"*/)
+	modify := ldap.NewModifyRequest(dn)
 	modify.Replace("badgeRfid", []string{rfid})
 	err = l.conn.Modify(modify)
 	if err != nil {

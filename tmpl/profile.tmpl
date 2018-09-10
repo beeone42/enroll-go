@@ -1,41 +1,9 @@
 {{define "content"}}
+<script src="/assets/js/tools.js"></script>
 <script>
 
 rfid = "{{.Rfid}}"
 login = "{{.Login}}"
-
-function warn(msg)
-{
-  $.notify({
-    // options
-    message: msg
-  },{
-    // settings
-    type: 'warning',
-    allow_dismiss: true,
-    placement: {
-      from: "bottom",
-      align: "center"
-    }
-  });
-}
-
-function info(msg)
-{
-  $.notify({
-    // options
-    message: msg
-  },{
-    // settings
-    type: 'success',
-    allow_dismiss: true,
-    placement: {
-      from: "bottom",
-      align: "center"
-    }
-  });
-}
-
 
 function ldap_by_rfid(q_rfid, success) {
 	$("#enroll_rfid").prop('disabled', true);
@@ -72,24 +40,24 @@ function ldap_by_login(q_login, success) {
         $("#ldap_dn").text(infos[0]['dn']);
         $("#ldap_rfid").text(infos[0]['badgerfid']);
         $("#ldap_pin").text(infos[0]['badgepin']);
-	if ($("#p_name").text() == "") {
-	  $("#p_name").text(infos[0]['cn']);
-	}
-	if ($("#p_company").text() == "") {
-	  $("#p_company").text(infos[0]['dn'].split(",")[1].split("=")[1]);
-	}
-	if ($("#p_email").text() == "") {
-	  $("#p_email").text(infos[0]['alias']);
-  	  login = infos[0]['alias'].split("@")[0];
-	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
-	}
-	if ($("#p_rfid").text() == "") {
-	  $("#p_rfid").text(infos[0]['badgerfid']);
-	}
-	if (success != null) {
- 	  $("#enroll_rfid").prop('disabled', false);;
-	  success();
-	}
+		if ($("#p_name").text() == "") {
+		  $("#p_name").text(infos[0]['cn']);
+		}
+		if ($("#p_company").text() == "") {
+		  $("#p_company").text(infos[0]['dn'].split(",")[1].split("=")[1]);
+		}
+		if ($("#p_email").text() == "") {
+		  $("#p_email").text(infos[0]['alias']);
+	  	  login = infos[0]['alias'].split("@")[0];
+		  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
+		}
+		if ($("#p_rfid").text() == "") {
+		  $("#p_rfid").text(infos[0]['badgerfid']);
+		}
+		if (success != null) {
+	 	  $("#enroll_rfid").prop('disabled', false);;
+		  success();
+		}
       }
     });
 }
@@ -164,8 +132,6 @@ function  tac_by_email(q_email, success) {
       }
   });
 }
-
-
 
 function  tac_by_rfid(q_rfid, success) {
     $.getJSON("/api/tac/user/byrfid/" + q_rfid, function (data) {
@@ -294,13 +260,6 @@ $(function () {
 
 
 });
-
-function formatTag(tag) {
-  if (tag.length == 14) {
-    return (tag.substring(0, 10) + "<b>" + tag.substring(10, 14) + "</b>");
-  }
-  return (tag);
-}
 
 function submitForm() {
   if ($("#login").val() != "")

@@ -38,6 +38,7 @@ function info(msg)
 
 
 function ldap_by_rfid(q_rfid, success) {
+	$("#enroll_rfid").prop('disabled', true);
     $.getJSON("/api/ldap/byrfid/" + q_rfid, function (infos) {
       if (infos == null) {
         warn('LDAP Search RFID returned nothing');
@@ -49,6 +50,7 @@ function ldap_by_rfid(q_rfid, success) {
         $("#ldap_rfid").text(infos[0]['badgerfid']);
         $("#ldap_pin").text(infos[0]['badgepin']);
         if (success != null) {
+   	 	  $("#enroll_rfid").prop('disabled', false);;
           success();
         }
       }
@@ -56,6 +58,7 @@ function ldap_by_rfid(q_rfid, success) {
 }
 
 function ldap_by_login(q_login, success) {
+	$("#enroll_rfid").prop('disabled', true);
     $.getJSON("/api/ldap/bylogin/" + q_login, function (infos) {
       if (infos == null) {
         warn('LDAP Search LOGIN returned nothing');
@@ -84,6 +87,7 @@ function ldap_by_login(q_login, success) {
 	  $("#p_rfid").text(infos[0]['badgerfid']);
 	}
 	if (success != null) {
+ 	  $("#enroll_rfid").prop('disabled', false);;
 	  success();
 	}
       }
@@ -92,27 +96,40 @@ function ldap_by_login(q_login, success) {
 
 function fill_tac_data(data) {
 
-        $("#p_name").text(data['name']);
-        $("#p_company").text(data['company']);
-
-        $("#ca_id").text(data['id']);
-        $("#ca_name").text(data['name']);
-        $("#ca_company").text(data['company']);
-
 	$.getJSON("/api/tac/user/byid/" + data['id'], function (infos) {
-	  $("#p_email").text(infos['email']);
-	  $("#ca_email").text(infos['email']);
-	  login = infos['email'].split("@")[0];
-	  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
-	});
-	$.getJSON("/api/tac/profile/byid/" + data['id'], function (profiles) {
-	  //alert(profiles);
-	  var names = profiles.map(p => p.name);
-	  $("#ca_profiles").text(names.join(", "));
-	});
-	$.getJSON("/api/tac/tags/byid/" + data['id'], function (tags) {
-	  var ids = tags.map(p => formatTag(p.id));
-	  $("#ca_tags").html(ids.join(", "));
+
+		tac_login = infos['email'].split("@")[0];
+		if (login != "") {
+			if ((tac_login != "") && (tac_login != login))
+			{
+				warn("TAC Login mismatch: " + login + " != " + tac_login)
+				return
+			}
+		} else {
+			login = tac_login;
+		}
+
+		$("#p_name").text(data['name']);
+		$("#p_company").text(data['company']);
+
+		$("#ca_id").text(data['id']);
+		$("#ca_name").text(data['name']);
+		$("#ca_company").text(data['company']);
+
+		$("#p_email").text(infos['email']);
+		$("#ca_email").text(infos['email']);
+		$("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
+
+		$.getJSON("/api/tac/profile/byid/" + data['id'], function (profiles) {
+		  //alert(profiles);
+		  var names = profiles.map(p => p.name);
+		  $("#ca_profiles").text(names.join(", "));
+		});
+		$.getJSON("/api/tac/tags/byid/" + data['id'], function (tags) {
+		  var ids = tags.map(p => formatTag(p.id));
+		  $("#ca_tags").html(ids.join(", "));
+		});
+
 	});
 
 }
@@ -159,9 +176,9 @@ function  tac_by_rfid(q_rfid, success) {
       else
       {
         fill_tac_data(data);
-	if (success != null) {
-	  success();
-	}
+		if (success != null) {
+	  		success();
+		}
       }
   });
 }
@@ -509,7 +526,7 @@ function submitForm() {
 		  <form>
 		    <div class="form-group bmd-form-group">
               <label class="bmd-label-floating">RFID</label>
-		      <input id="enroll_rfid" type="text" class="form-control" />
+		      <input id="enroll_rfid" type="text" class="form-control" disabled />
 		    </div>
 		  </form>
 		</div>

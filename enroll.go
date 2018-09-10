@@ -49,6 +49,11 @@ func sendFile(w http.ResponseWriter, f string) {
 	return
 }
 
+func favicon(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "assets/img/favicon.ico")
+	return
+}
+
 func dashboard(w http.ResponseWriter, r *http.Request) {
 	p := Page{conf, "Enroll", "", "", "", ""}
 	t := template.New("Enroll")
@@ -73,7 +78,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 func sipass(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	p := Page{conf, "Enroll sipass", "", "", "", vars["sipass"]}
+	p := Page{conf, "Enroll sipass", "sipass", "", "", vars["sipass"]}
 	t := template.New("Enroll")
 	t = template.Must(t.ParseFiles("tmpl/layout.tmpl", "tmpl/sipass.tmpl"))
 	err := t.ExecuteTemplate(w, "layout", p)
@@ -175,21 +180,31 @@ func apiGetLastTagReadEx(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+
 func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 	var entries []*ldap.Entry
+	var lt TacLastTagRead
 
 	vars := mux.Vars(r)
-	porte_id := vars["pid"]
+	porte_id1 := vars["pid"]
+	porte_id2 := vars["pid2"]
 	event_id := vars["eid"]
 
 	tac.Login()
-	_, lt := tac.GetLastTagRead(porte_id, event_id)
+
+	if porte_id2 != "" {
+		_, lt = tac.GetLastTagReadEx(porte_id1, porte_id2, event_id)
+	} else {
+		_, lt = tac.GetLastTagRead(porte_id1, event_id)
+	}
+
 	_, infos := tac.GetUserById(lt.UserID.UserID)
 	fmt.Println("%#v", infos)
 	err := json.Unmarshal([]byte(infos), &lt.Tac)
 	if err != nil {
 		fmt.Fprintf(w, "{\"result\":\"error\"}")
 	}
+
 
 	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", lt.Rfid, -1)
 	fmt.Println("ldap search rfid: ", search)
@@ -199,6 +214,9 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 		lt.Ldap = append(lt.Ldap, ld.MapEntry(entry))
 	}
 
+	if lt.Ldap != nil {
+		lt.UID = strings.SplitN(strings.SplitN(lt.Ldap[0]["dn"], "uid=", 2)[1], ",", 2)[0]
+	}
 	res, _ := json.Marshal(lt)
 	fmt.Fprintf(w, "%s", res)
 	return
@@ -221,12 +239,18 @@ func apiGetLastTagReadInfosEx(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "{\"result\":\"error\"}")
 	}
 
+	lt.UID = strings.SplitN(lt.Tac.Email, "@", 2)[0]
+
 	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", lt.Rfid, -1)
 	fmt.Println("ldap search rfid: ", search)
 
 	entries, err = ld.Search(search)
 	for _, entry := range entries {
 		lt.Ldap = append(lt.Ldap, ld.MapEntry(entry))
+	}
+
+	if lt.Ldap != nil {
+		lt.UID = strings.SplitN(strings.SplitN(lt.Ldap[0]["dn"], "uid=", 2)[1], ",", 2)[0]
 	}
 
 	res, _ := json.Marshal(lt)
@@ -312,6 +336,7 @@ func main() {
 	}
 
 	r.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", http.FileServer(http.Dir("assets/"))))
+	r.HandleFunc("/favicon.ico", favicon)
 	r.HandleFunc("/", dashboard)
 	r.HandleFunc("/login", login)
 	r.HandleFunc("/profile", searchProfile)
@@ -330,7 +355,7 @@ func main() {
 	r.HandleFunc("/api/tac/tags/bypid/{pid}/{eid}", apiGetLastTagRead)
 	r.HandleFunc("/api/tac/tags/bypids/{pid1}/{pid2}/{eid}", apiGetLastTagReadEx)
 	r.HandleFunc("/api/tac/events/bypid/{pid}/{eid}", apiGetLastTagReadInfos)
-	r.HandleFunc("/api/tac/events/bypids/{pid1}/{pid2}/{eid}", apiGetLastTagReadInfosEx)
+	r.HandleFunc("/api/tac/events/bypids/{pid}/{pid2}/{eid}", apiGetLastTagReadInfos)
 	r.HandleFunc("/sipass", sipass)
 	r.HandleFunc("/sipass/{sipass}", sipass)
 

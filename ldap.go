@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gopkg.in/ldap.v2"
 	"time"
+	"strings"
 )
 
 type Ldap struct {
@@ -115,11 +116,28 @@ func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
 	return sr.Entries, nil
 }
 
+func (l *Ldap) GetDn(query string) (string, error) {
+	entries, err := l.Search(query)
+	if err != nil {
+		return "error", err
+	}
+	if len(entries) > 0 {
+		res := l.MapEntry(entries[0])
+		return res["dn"], nil
+	}
+	return "", nil
+}
+
 func (l *Ldap) Enroll(login string, rfid string) (string, error) {
 	l.Connect()
-	modify := ldap.NewModifyRequest("uid=sbenoit,ou=staff,ou=2014,ou=paris,ou=people,dc=42,dc=fr")
+	search := strings.Replace("(uid={login})", "{login}", login, -1)
+	dn, err := l.GetDn(search)
+	if err != nil {
+		return "error", err
+	}
+	modify := ldap.NewModifyRequest(dn /*"uid=sbenoit,ou=staff,ou=2014,ou=paris,ou=people,dc=42,dc=fr"*/)
 	modify.Replace("badgeRfid", []string{rfid})
-	err := l.conn.Modify(modify)
+	err = l.conn.Modify(modify)
 	if err != nil {
 		l.Close()
 		return "error", err

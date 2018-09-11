@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"gopkg.in/ldap.v2"
 	"time"
-	"strings"
+	"crypto/tls"
 )
 
-type Ldap struct {
+type LdapStaff struct {
 	server   string
 	bindUser string
 	bindPass string
@@ -17,15 +17,15 @@ type Ldap struct {
 	last     time.Time
 }
 
-func (l *Ldap) Init(conf Configuration) {
-	l.server = conf.LdapServer
-	l.bindUser = conf.LdapBind
-	l.bindPass = conf.LdapPassword
-	l.baseDn = conf.LdapBaseDn
+func (l *LdapStaff) Init(conf Configuration) {
+	l.server = conf.LdapStaffServer
+	l.bindUser = conf.LdapStaffBind
+	l.bindPass = conf.LdapStaffPassword
+	l.baseDn = conf.LdapStaffBaseDn
 	l.last = time.Now()
 }
 
-func (l *Ldap) Connect() (*ldap.Conn, error) {
+func (l *LdapStaff) Connect() (*ldap.Conn, error) {
 	d := time.Since(l.last).Seconds()
 	if d > 30 {
 		l.Close()
@@ -34,13 +34,15 @@ func (l *Ldap) Connect() (*ldap.Conn, error) {
 		return l.conn, nil
 	}
 	l.conn = nil
-	fmt.Println("LDAP Connect")
-	conn, err := ldap.Dial("tcp", l.server)
+	fmt.Println("LDAP STAFF Connect")
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	conn, err := ldap.DialTLS("tcp", l.server, tlsConfig)
 	if err != nil {
-		fmt.Println("LDAP Connect FAIL")
+		fmt.Println("LDAP STAFF Connect FAIL")
 		return nil, fmt.Errorf("Failed to connect. %s", err)
 	}
 	if err := conn.Bind(l.bindUser, l.bindPass); err != nil {
+		fmt.Println("LDAP STAFF Bind FAIL")
 		return nil, fmt.Errorf("Failed to bind. %s", err)
 	}
 	l.last = time.Now()
@@ -48,32 +50,27 @@ func (l *Ldap) Connect() (*ldap.Conn, error) {
 	return conn, nil
 }
 
-func (l *Ldap) Close() {
+func (l *LdapStaff) Close() {
 	if l.conn == nil {
 		return
 	}
-	fmt.Println("LDAP Close")
+	fmt.Println("LDAP STAFF Close")
 	l.conn.Close()
 	l.conn = nil
 }
 
-func (l *Ldap) MapEntry(entry *ldap.Entry) map[string]string {
+func (l *LdapStaff) MapEntry(entry *ldap.Entry) map[string]string {
 	var res map[string]string
 	res = make(map[string]string)
+	res["uid"] = entry.GetAttributeValue("sAMAccountName")
 	res["dn"] = entry.DN
 	res["cn"] = entry.GetAttributeValue("cn")
 	res["sn"] = entry.GetAttributeValue("sn")
 	res["givenname"] = entry.GetAttributeValue("givenName")
-	res["badgerfid"] = entry.GetAttributeValue("badgeRfid")
-	res["badgepin"] = entry.GetAttributeValue("badgePin")
-	res["uidnumber"] = entry.GetAttributeValue("uidNumber")
-	res["gidnumber"] = entry.GetAttributeValue("gidNumber")
-	res["loginshell"] = entry.GetAttributeValue("loginShell")
-	res["alias"] = entry.GetAttributeValue("alias")
 	return res
 }
 
-func (l *Ldap) JsonEntry(entry *ldap.Entry) string {
+func (l *LdapStaff) JsonEntry(entry *ldap.Entry) string {
 	res, err := json.Marshal(l.MapEntry(entry))
 	if err != nil {
 		return "json encoding error"
@@ -81,7 +78,7 @@ func (l *Ldap) JsonEntry(entry *ldap.Entry) string {
 	return string(res)
 }
 
-func (l *Ldap) JsonEntries(entries []*ldap.Entry) string {
+func (l *LdapStaff) JsonEntries(entries []*ldap.Entry) string {
 	var tab []map[string]string
 
 	for _, entry := range entries {
@@ -94,15 +91,15 @@ func (l *Ldap) JsonEntries(entries []*ldap.Entry) string {
 	return string(res)
 }
 
-func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
+func (l *LdapStaff) Search(query string) ([]*ldap.Entry, error) {
 	l.Connect()
+	if l.conn == nil {
+		return nil, nil
+	}
 	searchRequest := ldap.NewSearchRequest(
 		l.baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		query, []string{"dn", "cn", "uid",
-			"uidnumber", "gidnumber",
-			"sn", "givenname", "mobile", "alias",
-			"badgerfid", "badgepin", "loginshell"}, nil,
+		query, []string{"sAMAccountName", "dn", "cn", "sn", "givenname"}, nil,
 	)
 	sr, err := l.conn.Search(searchRequest)
 	if err != nil {
@@ -114,7 +111,7 @@ func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
 	return sr.Entries, nil
 }
 
-func (l *Ldap) GetDn(query string) (string, error) {
+func (l *LdapStaff) GetDn(query string) (string, error) {
 	entries, err := l.Search(query)
 	if err != nil {
 		return "error", err
@@ -124,21 +121,4 @@ func (l *Ldap) GetDn(query string) (string, error) {
 		return res["dn"], nil
 	}
 	return "", nil
-}
-
-func (l *Ldap) Enroll(login string, rfid string) (string, error) {
-	l.Connect()
-	search := strings.Replace("(uid={login})", "{login}", login, -1)
-	dn, err := l.GetDn(search)
-	if err != nil {
-		return "error", err
-	}
-	modify := ldap.NewModifyRequest(dn)
-	modify.Replace("badgeRfid", []string{rfid})
-	err = l.conn.Modify(modify)
-	if err != nil {
-		l.Close()
-		return "error", err
-	}
-	return "ok", nil
 }

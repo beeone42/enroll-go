@@ -17,6 +17,7 @@ import (
 
 var tac *Tac
 var ld *Ldap
+var ls *LdapStaff
 var conf Configuration
 
 type SipassConf struct {
@@ -34,6 +35,10 @@ type Configuration struct {
 	LdapBind     string
 	LdapPassword string
 	LdapBaseDn   string
+	LdapStaffServer   string
+	LdapStaffBind     string
+	LdapStaffPassword string
+	LdapStaffBaseDn   string
 	Sipass		 map[string]SipassConf
 	SipassDefault string
 }
@@ -213,42 +218,60 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 		_, lt = tac.GetLastTagRead(porte_id1, event_id)
 	}
 
-	if len(lt.Rfid) >= 10 {
-		r_rfid = lt.Rfid[0:10]
-	} else {
-		r_rfid = lt.Rfid
-	}
+	if lt.ID != "" {
+		if len(lt.Rfid) >= 10 {
+			r_rfid = lt.Rfid[0:10]
+		} else {
+			r_rfid = lt.Rfid
+		}
 
-	userid, err := strconv.Atoi(lt.UserID.UserID)
-	if (userid > 0) {
-		_, infos = tac.GetUserById(lt.UserID.UserID)
-	} else {
-		_, infos = tac.GetUserByTag(r_rfid)
-	}
+		userid, err := strconv.Atoi(lt.UserID.UserID)
+		if (userid > 0) {
+			_, infos = tac.GetUserById(lt.UserID.UserID)
+		} else {
+			_, infos = tac.GetUserByTag(r_rfid)
+		}
 
 
 
-	fmt.Println("%#v", infos)
-	err = json.Unmarshal([]byte(infos), &lt.Tac)
-	if err != nil {
-		fmt.Fprintf(w, "{\"result\":\"error\"}")
-	}
+		fmt.Println("%#v", infos)
+		err = json.Unmarshal([]byte(infos), &lt.Tac)
+		if err != nil {
+			fmt.Fprintf(w, "{\"result\":\"error\"}")
+		}
 
-	search = strings.Replace("(badgeRfid={rfid})", "{rfid}", r_rfid, -1)
-	fmt.Println("ldap search rfid: ", search)
+		search = strings.Replace("(badgeRfid={rfid})", "{rfid}", r_rfid, -1)
+		fmt.Println("ldap search rfid: ", search)
 
-	entries, err = ld.Search(search)
-	for _, entry := range entries {
-		lt.Ldap = append(lt.Ldap, ld.MapEntry(entry))
-	}
+		entries, err = ld.Search(search)
+		for _, entry := range entries {
+			lt.Ldap = append(lt.Ldap, ld.MapEntry(entry))
+		}
 
-	if lt.Ldap != nil {
-		lt.UID = strings.SplitN(strings.SplitN(lt.Ldap[0]["dn"], "uid=", 2)[1], ",", 2)[0]
+		if lt.Ldap != nil {
+			lt.UID = strings.SplitN(strings.SplitN(lt.Ldap[0]["dn"], "uid=", 2)[1], ",", 2)[0]
+		}
 	}
 	res, _ := json.Marshal(lt)
 	fmt.Fprintf(w, "%s", res)
 	return
 }
+
+func ldapStaffSearchByLogin(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	login := vars["login"]
+	search := strings.Replace("(sAMAccountName={login})", "{login}", login, -1)
+	fmt.Println("search: ", search)
+	entries, err := ls.Search(search)
+	if err != nil {
+		fmt.Println("%s", err)
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+	fmt.Fprintf(w, "%s", ls.JsonEntries(entries))
+	return
+}
+
 
 func ldapSearchByLogin(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -310,6 +333,7 @@ func main() {
 	r := mux.NewRouter()
 	tac = &Tac{}
 	ld = &Ldap{}
+	ls = &LdapStaff{}
 	conf = Configuration{}
 	err := gonfig.GetConf("config.json", &conf)
 	if err != nil {
@@ -327,6 +351,14 @@ func main() {
 		fmt.Println("LDAP Connect failed !")
 	}
 
+	ls.Init(conf)
+	ls.Connect()
+	if ls.conn != nil {
+		defer ls.Close()
+	} else {
+		fmt.Println("LDAP STAFF Connect failed !")
+	}
+
 	r.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", http.FileServer(http.Dir("assets/"))))
 	r.HandleFunc("/favicon.ico", favicon)
 	r.HandleFunc("/", dashboard)
@@ -339,6 +371,10 @@ func main() {
 	r.HandleFunc("/api/ldap/byrfid/{rfid}", ldapSearchByRfid)
 	r.HandleFunc("/api/ldap/autocomplete/{query}", ldapAutocomplete)
 	r.HandleFunc("/api/ldap/enroll/{login}/{rfid}", ldapEnroll)
+
+	r.HandleFunc("/api/ldapstaff/bylogin/{login}", ldapStaffSearchByLogin)
+
+
 	r.HandleFunc("/api/tac/user/byrfid/{rfid}", apiGetUserByRfid)
 	r.HandleFunc("/api/tac/user/byid/{id}", apiGetUserById)
 	r.HandleFunc("/api/tac/user/byemail/{email}", apiGetUsersByEmail)

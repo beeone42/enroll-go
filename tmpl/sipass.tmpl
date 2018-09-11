@@ -21,16 +21,18 @@ var porte_id2 = conf.Pid2
 function update_datas(porte_id1, porte_id2, event_id)
 {
   d = new Date();
-  url = "/api/tac/events/bypids/" + porte_id1 + (porte_id2 != "" ? "/" + porte_id2 : "") + "/" + event_id;
+  url = "/api/tac/events/bypids/" + porte_id1 + (porte_id2 != "" ? "/" + porte_id2 : "") + "/" + last_id.toString();
 
   $("#cam").attr("src", cam + "?" + d.getTime())
 
   $.getJSON(url)
   .done(function(data) {
 
+    if (data.id == "")
+      return ;
     if (data.id != last_id)
     {
-      info("update");
+      info(data.Tac.prettyname + " (" + data.Tac.company + ")");
       $("#ca_name").text(data.Tac.prettyname);
       $("#ca_company").text(data.Tac.company);
       $("#ca_rfid").text(data.tag);
@@ -38,7 +40,7 @@ function update_datas(porte_id1, porte_id2, event_id)
         if (data.Pin == data.Ldap[0].badgepin) {
           $("#ca_pin").text(data.Pin);
         } else {
-          $("#ca_pin").text("<span style='color: red'>" + data.Pin + "</span><span style='color: green'>" + data.Ldap[0].badgepin + "</span>");
+          $("#ca_pin").html("<span style='color: red'>" + data.Pin + "</span><span style='color: green'>" + data.Ldap[0].badgepin + "</span>");
         }
       }
       if (data.UID != "") {

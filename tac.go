@@ -71,29 +71,22 @@ func (t *Tac) SetCredentials(tac_url, login, passwd string) {
 	t.jar, _ = cookiejar.New(nil)
 	t.last = time.Now()
 	fmt.Printf("url: %s...\n", t.url)
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = 
+		&tls.Config{InsecureSkipVerify: true}
 }
 
-func (t *Tac) RequestEx(action string, params []string, paramsEx map[string]string) (code int, body string) {
+func (t *Tac) RequestEx(action string, params []string,
+		paramsEx map[string]string) (code int, body string) {
 	fmt.Println("%s: %#v", action, params)
-
-	client := &http.Client{
-		Jar: t.jar,
-	}
-
+	client := &http.Client{ Jar: t.jar }
 	v := url.Values{}
 	v.Set("rpc[func]", action)
-
 	i := 0
 	for i < len(params) {
 		v.Add(fmt.Sprintf("rpc[params][%d]", i), params[i])
 		i++
 	}
-
-	for k := range paramsEx {
-		v.Add(k, paramsEx[k])
-	}
-
+	for k := range paramsEx { v.Add(k, paramsEx[k])	}
 	fmt.Println("v: %#v", v)
 	resp, err := client.PostForm(t.url+"action.php", v)
 	if err != nil {
@@ -181,6 +174,10 @@ func (t *Tac) ParseResponse(body string) string {
 
 func (t *Tac) GetUserByTag(tag string) (code int, body string) {
 	var p TacUserProfil
+
+	if (tag == "") {
+		return -1, "tag empty"
+	}
 	code, body = t.Request("taction_get_user_bytag", []string{t.ReverseTag(tag)})
 	res := t.ParseResponse(body)
 	err := json.Unmarshal([]byte(res), &p)
@@ -204,7 +201,8 @@ func (t *Tac) GetUserById(id string) (code int, body string) {
 }
 
 func (t *Tac) GetProfileById(id string) (code int, body string) {
-	code, body = t.RequestEx("taction_get_profile_byuser", []string{id}, map[string]string{"sort": "name", "dir": "ASC"})
+	code, body = t.RequestEx("taction_get_profile_byuser", []string{id},
+		map[string]string{"sort": "name", "dir": "ASC"})
 	res := fmt.Sprintf("[%s]", t.ParseResponse(body))
 	return code, res
 }
@@ -216,7 +214,8 @@ func (t *Tac) GetTagsById(id string) (code int, body string) {
 }
 
 func (t *Tac) GetUsersByProfile(id string) (code int, body string) {
-	code, body = t.RequestEx("taction_get_user_byprofile", []string{id}, map[string]string{"sort": "name", "dir": "ASC"})
+	code, body = t.RequestEx("taction_get_user_byprofile", []string{id},
+		map[string]string{"sort": "name", "dir": "ASC"})
 	res := t.ParseResponse(body)
 	fmt.Println("%#v", body)
 	return code, res
@@ -239,7 +238,8 @@ func (t *Tac) GetUsersByEmail(email string) (code int, body string) {
 
 func (t *Tac) GetLastTagRead(porte_id, event_id string) (code int, lt TacLastTagRead) {
 	var body string
-	code, body = t.Request("taction_get_last_tag_read", []string{porte_id, event_id})
+	code, body = t.Request("taction_get_last_tag_read",
+		[]string{porte_id, event_id})
 	res := t.ParseResponse(body)
 	err := json.Unmarshal([]byte(res), &lt)
 	if err != nil {

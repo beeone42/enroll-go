@@ -40,6 +40,18 @@ function reverseTag(tag) {
   return res
 }
 
+function checkSession() {
+  $("body").hide();
+  token = sessionStorage.getItem('bearer');
+  $.ajaxSetup({headers: {'Authorization' : 'Bearer ' + token}});
+  $.getJSON("/api/check", function (res) {
+    if (res["authentified"] == "false") {
+      go(res["goto"]);
+    }
+  });
+  $("body").show();
+}
+
 function go(dst) {
   document.location.href = dst;
 }

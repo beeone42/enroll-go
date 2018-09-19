@@ -13,12 +13,14 @@ import (
 	"strings"
 	"encoding/json"
 	"gopkg.in/ldap.v2"
+	"crypto/rand"
 )
 
 var tac *Tac
 var ld *Ldap
 var ls *LdapStaff
 var conf Configuration
+var sessions map[string]string
 
 type SipassConf struct {
 	Cam		string
@@ -90,6 +92,17 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func logout(w http.ResponseWriter, r *http.Request) {
+	p := Page{conf, "Enroll Logout", "", "", "", ""}
+	t := template.New("Enroll")
+	t = template.Must(t.ParseFiles("tmpl/logout.tmpl"))
+	err := t.ExecuteTemplate(w, "logout", p)
+	if err != nil {
+		log.Fatalf("Template execution: %s", err)
+	}
+
+}
+
 func sipass(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	sipass := vars["sipass"]
@@ -118,12 +131,90 @@ func searchProfile(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func tokenGenerator() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
+}
+
+func checkSession(w http.ResponseWriter, r *http.Request) bool {
+	res := make(map[string]string)
+	bearer, exists := r.Header["Authorization"]
+	if exists {
+		tmp := strings.SplitN(bearer[0], " ", 2)
+		if len(tmp) == 2 {
+			token := tmp[1]
+			_, exists = sessions[token]
+			if exists {
+				return true
+			}
+		}
+	}
+	res["error"] = "true"
+	res["authentified"] = "false"
+	res["goto"] = "/login"
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	json.NewEncoder(w).Encode(res)
+	return false
+}
+
 func apiLogin(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "%s", "{\"res\": \"ok\"}")
+	res := make(map[string]string)
+	login := r.FormValue("login")
+	passwd := r.FormValue("passwd")
+	auth, _ := ls.Auth(login, passwd)
+
+	if auth {
+		res["auth"] = "true"
+		res["token"] = tokenGenerator()
+		sessions[res["token"]] = login
+	} else {
+		res["auth"] = "false"
+	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	json.NewEncoder(w).Encode(res)
+
 	return
 }
 
+func apiLogout(w http.ResponseWriter, r *http.Request) {
+	res := make(map[string]string)
+	login := r.FormValue("login")
+	token := r.FormValue("token")
+	res["result"] = "false"
+
+	fmt.Println(sessions)
+
+	value, exist := sessions[token];
+
+	if exist {
+		if value == login {
+			res["result"] = "true"
+			delete(sessions, token)
+		} else {
+			res["error"] = "login / token mismatch"
+		}
+	} else {
+		res["error"] = "unknown token"
+	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	json.NewEncoder(w).Encode(res)
+
+	return
+}
+
+func apiCheck(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
+	res := make(map[string]string)
+	res["authentified"] = "true"
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	json.NewEncoder(w).Encode(res)
+	return
+}
+
+
 func apiGetUserByRfid(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	rfid := vars["rfid"]
 	tac.Login()
@@ -133,6 +224,7 @@ func apiGetUserByRfid(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetUserById(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	id := vars["id"]
 	tac.Login()
@@ -142,6 +234,7 @@ func apiGetUserById(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetProfileById(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	id := vars["id"]
 	tac.Login()
@@ -151,6 +244,7 @@ func apiGetProfileById(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetTagsById(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	id := vars["id"]
 	tac.Login()
@@ -160,6 +254,7 @@ func apiGetTagsById(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetUsersByEmail(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	email := vars["email"]
 	tac.Login()
@@ -169,21 +264,19 @@ func apiGetUsersByEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetLastTagRead(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	porte_id := vars["pid"]
 	event_id := vars["eid"]
 	tac.Login()
 	_, lt := tac.GetLastTagRead(porte_id, event_id)
-	res, err := json.Marshal(lt)
-	if err != nil {
-		fmt.Fprintf(w, "{\"result\":\"error\"}")
-	} else {
-		fmt.Fprintf(w, "%s", res)
-	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	json.NewEncoder(w).Encode(lt)
 	return
 }
 
 func apiGetLastTagReadEx(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	porte_id1 := vars["pid1"]
 	porte_id2 := vars["pid2"]
@@ -201,6 +294,7 @@ func apiGetLastTagReadEx(w http.ResponseWriter, r *http.Request) {
 
 
 func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	var entries []*ldap.Entry
 	var lt TacLastTagRead
 	var infos, search, r_rfid string
@@ -258,6 +352,7 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 }
 
 func ldapStaffSearchByLogin(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	login := vars["login"]
 	search := strings.Replace("(sAMAccountName={login})", "{login}", login, -1)
@@ -274,6 +369,7 @@ func ldapStaffSearchByLogin(w http.ResponseWriter, r *http.Request) {
 
 
 func ldapSearchByLogin(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	login := vars["login"]
 	search := strings.Replace("(uid={login})", "{login}", login, -1)
@@ -289,6 +385,7 @@ func ldapSearchByLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func ldapSearchByRfid(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	rfid := vars["rfid"]
 	search := strings.Replace("(badgeRfid={rfid})", "{rfid}", rfid, -1)
@@ -303,6 +400,7 @@ func ldapSearchByRfid(w http.ResponseWriter, r *http.Request) {
 }
 
 func ldapAutocomplete(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	query := vars["query"]
 	search := strings.Replace("(|(uid=*{query}*)(cn=*{query}*))", "{query}", query, -1)
@@ -317,6 +415,7 @@ func ldapAutocomplete(w http.ResponseWriter, r *http.Request) {
 }
 
 func ldapEnroll(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	login := vars["login"]
 	rfid := vars["rfid"]
@@ -335,6 +434,7 @@ func main() {
 	ld = &Ldap{}
 	ls = &LdapStaff{}
 	conf = Configuration{}
+	sessions = make(map[string]string)
 	err := gonfig.GetConf("config.json", &conf)
 	if err != nil {
 		panic(err)
@@ -363,17 +463,21 @@ func main() {
 	r.HandleFunc("/favicon.ico", favicon)
 	r.HandleFunc("/", dashboard)
 	r.HandleFunc("/login", login)
+	r.HandleFunc("/logout", logout)
 	r.HandleFunc("/profile", searchProfile)
 	r.HandleFunc("/profile/rfid/{rfid}", searchProfile)
 	r.HandleFunc("/profile/login/{login}", searchProfile)
-	r.HandleFunc("/api/login", apiLogin)
+
+	r.HandleFunc("/api/login", apiLogin).Methods("POST")
+	r.HandleFunc("/api/logout", apiLogout).Methods("POST")
+	r.HandleFunc("/api/check", apiCheck)
+
 	r.HandleFunc("/api/ldap/bylogin/{login}", ldapSearchByLogin)
 	r.HandleFunc("/api/ldap/byrfid/{rfid}", ldapSearchByRfid)
 	r.HandleFunc("/api/ldap/autocomplete/{query}", ldapAutocomplete)
 	r.HandleFunc("/api/ldap/enroll/{login}/{rfid}", ldapEnroll)
 
 	r.HandleFunc("/api/ldapstaff/bylogin/{login}", ldapStaffSearchByLogin)
-
 
 	r.HandleFunc("/api/tac/user/byrfid/{rfid}", apiGetUserByRfid)
 	r.HandleFunc("/api/tac/user/byid/{id}", apiGetUserById)

@@ -25,6 +25,19 @@ func (l *LdapStaff) Init(conf Configuration) {
 	l.last = time.Now()
 }
 
+func (l *LdapStaff) Auth(login, passwd string) (bool, error) {
+	l.Close()
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	conn, err := ldap.DialTLS("tcp", l.server, tlsConfig)
+	if err != nil {
+		return false, fmt.Errorf("Failed to connect. %s", err)
+	}
+	if err := conn.Bind(login, passwd); err != nil {
+		return false, fmt.Errorf("Failed to bind. %s", err)
+	}
+	return true, nil
+}
+
 func (l *LdapStaff) Connect() (*ldap.Conn, error) {
 	d := time.Since(l.last).Seconds()
 	if d > 30 {

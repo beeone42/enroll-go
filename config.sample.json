@@ -19,5 +19,8 @@
 			"pid2":	""
 		}
 	},
-	"SipassDefault":	"hall"
+	"SipassDefault":	"hall",
+	"BankUrl":	"https://bank.domain.com/api/v1/",
+	"BankVendor": "enroll-go",
+	"BankKey":	"P1c$0u"
 }

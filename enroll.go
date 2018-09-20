@@ -16,6 +16,7 @@ import (
 	"crypto/rand"
 )
 
+var bank *Bank
 var tac *Tac
 var ld *Ldap
 var ls *LdapStaff
@@ -43,6 +44,9 @@ type Configuration struct {
 	LdapStaffBaseDn   string
 	Sipass		 map[string]SipassConf
 	SipassDefault string
+	BankUrl		string
+	BankVendor	string
+	BankKey		string
 }
 
 type Page struct {
@@ -211,6 +215,37 @@ func apiCheck(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 	return
 }
+
+
+
+func bankByLogin(w http.ResponseWriter, r *http.Request) {
+//	if checkSession(w, r) != true { return }
+	vars := mux.Vars(r)
+	login := vars["login"]
+	_, body := bank.GetUserInfosByLogin(login)
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
+func bankByRfid(w http.ResponseWriter, r *http.Request) {
+//	if checkSession(w, r) != true { return }
+	vars := mux.Vars(r)
+	rfid := vars["rfid"]
+	_, body := bank.GetUserInfosByRfid(rfid)
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
+func bankRefundByLogin(w http.ResponseWriter, r *http.Request) {
+//	if checkSession(w, r) != true { return }
+	vars := mux.Vars(r)
+	login := vars["login"]
+	refund := vars["refund"]
+	_, body := bank.SetRefundByLogin(login, refund)
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
 
 
 func apiGetUserByRfid(w http.ResponseWriter, r *http.Request) {
@@ -430,6 +465,7 @@ func ldapEnroll(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := mux.NewRouter()
+	bank = &Bank{}
 	tac = &Tac{}
 	ld = &Ldap{}
 	ls = &LdapStaff{}
@@ -441,6 +477,7 @@ func main() {
 	}
 	fmt.Println("%#v", conf)
 
+	bank.SetCredentials(conf.BankUrl, conf.BankVendor, conf.BankKey)
 	tac.SetCredentials(conf.CaUrl, conf.CaUser, conf.CaPass)
 
 	ld.Init(conf)
@@ -471,6 +508,10 @@ func main() {
 	r.HandleFunc("/api/login", apiLogin).Methods("POST")
 	r.HandleFunc("/api/logout", apiLogout).Methods("POST")
 	r.HandleFunc("/api/check", apiCheck)
+
+	r.HandleFunc("/api/bank/bylogin/{login}", bankByLogin)
+	r.HandleFunc("/api/bank/byrfid/{rfid}", bankByRfid)
+	r.HandleFunc("/api/bank/refund/{login}/{refund}", bankRefundByLogin)
 
 	r.HandleFunc("/api/ldap/bylogin/{login}", ldapSearchByLogin)
 	r.HandleFunc("/api/ldap/byrfid/{rfid}", ldapSearchByRfid)

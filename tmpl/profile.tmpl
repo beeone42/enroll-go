@@ -64,6 +64,43 @@ function ldap_by_login(q_login, success) {
     });
 }
 
+function bank_set_refund(login, refund)
+{
+	$.get("/api/bank/refund/" + login + "/" + refund, function (data) {
+		console.log(data);
+	});
+}
+
+function fill_bank_data(data)
+{
+	$("#bank_refund").change(function () {});
+
+	$("#bank_balance").text(data['balance']);
+	$("#bank_refund" ).prop( "checked", (data["refund"] == "1"));
+
+	$("#bank_refund").change(function () {
+	  if ($(this).prop("checked"))
+	  {
+	  	bank_set_refund(data['login'], '1');
+	  	info("refund on");
+	  } else {
+	  	bank_set_refund(data['login'], '0');
+	  	warn("refund off");
+	  }
+	});
+}
+
+function bank_by_rfid(rfid)
+{
+	$.getJSON("/api/bank/byrfid/" + rfid, function (data) {
+		if (data["success"] == "TRUE")
+			fill_bank_data(data);
+		else
+			warn("failed to get bank infos");
+	});
+}
+
+
 function fill_tac_data(data) {
 
 	$.getJSON("/api/tac/user/byid/" + data['id'], function (infos) {
@@ -187,7 +224,13 @@ function auto_complete(q) {
   });
 }
 
+//
+// <!-- MAIN -->
+//
+
 $(function () {
+
+  // set new rfid on currently displayed user profile
 
   $("#enroll_rfid").keydown(function(e) {
     if (e.which == 13)
@@ -200,7 +243,6 @@ $(function () {
 
       $("#enroll_rfid").focus();
       $("#enroll_rfid").select();
-
 
       if (e_login == "")
       {
@@ -216,12 +258,7 @@ $(function () {
       $.get("/api/ldap/enroll/" + e_login + "/" + e_rfid, function (data) {
 	      info("update " + e_login + ".rfid = " + e_rfid);
 	      setTimeout(function(){ document.location.href = "/profile/login/" + $("#login").val().trim(); }, 1000)
-	      
-      }).fail(
-       function () {
-      	warn("update failed");
-      });
-
+      }).fail(function(){ warn("update failed"); });
     }
   });
   
@@ -233,14 +270,16 @@ $(function () {
     }
     return true;
   });
+
+
+  // auto complete login field
   
   $("#login").keyup(function(e) {
-    {
-      if (e.which != 13) {
-        // auto complete
-        v = $("#login").val().trim();
+	if (e.which != 13)
+	{
+	    // auto complete
+	    v = $("#login").val().trim();
 	    auto_complete(v);
-      }
     }
     return true;
   });
@@ -250,6 +289,7 @@ $(function () {
       rfid = $("#ldap_rfid").text();
       if (rfid != "") {
         tac_by_rfid(rfid, null);
+        bank_by_rfid(rfid);
       }
     });
   }
@@ -258,6 +298,7 @@ $(function () {
     $("#p_rfid").text(rfid);
     tac_by_rfid(rfid, null);
     ldap_by_rfid(rfid, null);
+    bank_by_rfid(rfid);
   }
 
 
@@ -273,15 +314,15 @@ function submitForm() {
 
 </script>
 
-<div class="container-fluid">
+<div class="container-fluid" style="padding-left: 30px;">
 
   <!-- 1ERE LIGNE -->
 
   <div class="row">
+    <div class="card-deck" style="width: 100%">
 
     <!-- search panel -->
 
-    <div class="col-md-6">
       <div class="card">
       	<div class="card-header card-header-icon card-header-primary">
 		  <div class="card-icon">
@@ -303,11 +344,9 @@ function submitForm() {
 		  <p id="auto" style="cursor: pointer;"></p>
 		</div>
       </div>
-    </div>
 
     <!-- info panel -->
 
-    <div class="col-md-6">
       <div class="card card-profile">
         <div class="card-avatar">
 	  <img id="avatar" class="img" src="/assets/img/faces/john.jpg">
@@ -353,73 +392,71 @@ function submitForm() {
   <!-- 2EME LIGNE -->
 
   <div class="row">
+    <div class="card-deck" style="width: 100%">
   
   <!-- reponses du CA -->
   
-    <div class="col-md-6">
       <div class="card">
       	<div class="card-header card-header-icon card-header-primary">
-	  <div class="card-icon">
-	    <i class="material-icons">credit_card</i>
+		  <div class="card-icon">
+		    <i class="material-icons">credit_card</i>
+		  </div>
+		  <h4 class="card-title">TAC</h4>
+		</div>
+		<div class="card-body">
+		  <!-- TAC name -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">face</i>
+	              </span>
+		    </div>
+		    <span id="ca_name"></span>
+		  </div>
+		  <!-- TAC company -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">business</i>
+	              </span>
+		    </div>
+		    <span id="ca_company"></span>
+		  </div>
+		  <!-- TAC id -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">list_alt</i>
+	              </span>
+		    </div>
+		    <span id="ca_id"></span>
+		  </div>
+		  <!-- TAC email -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text"><i class="material-icons">email</i></span>
+		    </div>
+		    <span id="ca_email"></span>
+		  </div>
+		  <!-- TAC profiles -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text"><i class="material-icons">meeting_room</i></span>
+		    </div>
+		    <span id="ca_profiles"></span>
+		  </div>
+		  <!-- TAC tags -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text"><i class="material-icons">credit_card</i></span>
+		    </div>
+		    <span id="ca_tags"></span>
+		  </div>
+		</div>
 	  </div>
-	  <h4 class="card-title">TAC</h4>
-	</div>
-	<div class="card-body">
-	  <!-- TAC name -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text">
- 	        <i class="material-icons">face</i>
-              </span>
-	    </div>
-	    <span id="ca_name"></span>
-	  </div>
-	  <!-- TAC company -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text">
- 	        <i class="material-icons">business</i>
-              </span>
-	    </div>
-	    <span id="ca_company"></span>
-	  </div>
-	  <!-- TAC id -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text">
- 	        <i class="material-icons">list_alt</i>
-              </span>
-	    </div>
-	    <span id="ca_id"></span>
-	  </div>
-	  <!-- TAC email -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text"><i class="material-icons">email</i></span>
-	    </div>
-	    <span id="ca_email"></span>
-	  </div>
-	  <!-- TAC profiles -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text"><i class="material-icons">meeting_room</i></span>
-	    </div>
-	    <span id="ca_profiles"></span>
-	  </div>
-	  <!-- TAC tags -->
-	  <div class="input-group">
-	    <div class="input-group-prepend">
-	      <span class="input-group-text"><i class="material-icons">credit_card</i></span>
-	    </div>
-	    <span id="ca_tags"></span>
-	  </div>
-	</div>
-      </div>
-    </div>
 
 <!-- reponses du LDAP -->
 
-    <div class="col-md-6">
       <div class="card">
       	<div class="card-header card-header-icon card-header-primary">
 		  <div class="card-icon">
@@ -427,7 +464,7 @@ function submitForm() {
 		  </div>
 		  <h4 class="card-title">LDAP</h4>
 		</div>
-		<div class="card-body">
+		<div class="card-body" style="display: flex; flex-direction: column; height: 100%;">
 		  <!-- LDAP cn -->
 		  <div class="input-group">
 		    <div class="input-group-prepend">
@@ -466,16 +503,17 @@ function submitForm() {
 		  </div>
 		</div>
       </div>
-    </div>
-  </div>
+
+    </div> <!-- /card-deck -->
+  </div> <!-- /row -->
 
   <!-- 3EME LIGNE -->
 
   <div class="row">
+    <div class="card-deck" style="width: 100%">
 
     <!-- update ldap rfid panel -->
 
-    <div class="col-md-12">
       <div class="card">
       	<div class="card-header card-header-icon card-header-primary">
 		  <div class="card-icon">
@@ -492,9 +530,49 @@ function submitForm() {
 		  </form>
 		</div>
       </div>
-    </div>
 
-  </div>
+    <!-- bank -->
+
+      <div class="card">
+      	<div class="card-header card-header-icon card-header-primary">
+		  <div class="card-icon">
+		    <i class="material-icons">account_balance</i>
+		  </div>
+		  <h4 class="card-title">Bank / Food</h4>
+		</div>
+		<div class="card-body">
+		  <!-- BANK balance -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">credit_card</i>
+              </span>
+		    </div>
+		    <span id="bank_balance">-.--</span> &euro;
+		  </div>
+		  <!-- BANK refund -->
+
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons">money</i>
+              </span>
+		    </div>
+		    <div class="form-check">
+		      <label class="form-check-label">
+			    <input class="form-check-input" type="checkbox" id="bank_refund" />refund
+
+				  <span class="form-check-sign">
+                    <span class="check"></span>
+                  </span>
+
+			</div>
+		  </div>
+
+		</div>
+      </div>
+    </div> <!-- /card-deck -->
+ </div> <!-- /row -->
 
 </div>
 {{end}}

@@ -1,228 +1,13 @@
 {{define "content"}}
 <script src="/assets/js/tools.js"></script>
+<script src="/assets/js/profile.js"></script>
 <script>
 
 checkSession();
 
-rfid = "{{.Rfid}}"
-login = "{{.Login}}"
-
-function ldap_by_rfid(q_rfid, success) {
-	$("#enroll_rfid").prop('disabled', true);
-    $.getJSON("/api/ldap/byrfid/" + q_rfid, function (infos) {
-      if (infos == null) {
-        warn('LDAP Search RFID returned nothing');
-        return ;
-      }
-      if (infos.length > 0) {
-        $("#ldap_cn").text(infos[0]['cn']);
-        $("#ldap_dn").text(infos[0]['dn']);
-        $("#ldap_rfid").text(infos[0]['badgerfid']);
-        $("#ldap_pin").text(infos[0]['badgepin']);
-        if (success != null) {
-   	 	  $("#enroll_rfid").prop('disabled', false);;
-          success();
-        }
-      }
-    });
-}
-
-function ldap_by_login(q_login, success) {
-	$("#enroll_rfid").prop('disabled', true);
-    $.getJSON("/api/ldap/bylogin/" + q_login, function (infos) {
-      if (infos == null) {
-        warn('LDAP Search LOGIN returned nothing');
-
-	tac_by_email(q_login + "@", null);
-
-        return ;
-      }
-      if (infos.length > 0) {
-        $("#ldap_cn").text(infos[0]['cn']);
-        $("#ldap_dn").text(infos[0]['dn']);
-        $("#ldap_rfid").text(infos[0]['badgerfid']);
-        $("#ldap_pin").text(infos[0]['badgepin']);
-		if ($("#p_name").text() == "") {
-		  $("#p_name").text(infos[0]['cn']);
-		}
-		if ($("#p_company").text() == "") {
-		  $("#p_company").text(infos[0]['dn'].split(",")[1].split("=")[1]);
-		}
-		if ($("#p_email").text() == "") {
-		  $("#p_email").text(infos[0]['alias']);
-	  	  login = infos[0]['alias'].split("@")[0];
-		  $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
-		}
-		if ($("#p_rfid").text() == "") {
-		  $("#p_rfid").text(infos[0]['badgerfid']);
-		}
-		if (success != null) {
-	 	  $("#enroll_rfid").prop('disabled', false);;
-		  success();
-		}
-      }
-    });
-}
-
-function bank_set_refund(login, refund)
-{
-	$.get("/api/bank/refund/" + login + "/" + refund, function (data) {
-		console.log(data);
-	});
-}
-
-function fill_bank_data(data)
-{
-	$("#bank_refund").change(function () {});
-
-	$("#bank_balance").text(data['balance']);
-	$("#bank_refund" ).prop( "checked", (data["refund"] == "1"));
-
-	$("#bank_refund").change(function () {
-	  if ($(this).prop("checked"))
-	  {
-	  	bank_set_refund(data['login'], '1');
-	  	info("refund on");
-	  } else {
-	  	bank_set_refund(data['login'], '0');
-	  	warn("refund off");
-	  }
-	});
-}
-
-function bank_by_rfid(rfid)
-{
-	$.getJSON("/api/bank/byrfid/" + rfid, function (data) {
-		if (data["success"] == "TRUE")
-			fill_bank_data(data);
-		else
-			warn("failed to get bank infos");
-	});
-}
-
-
-function fill_tac_data(data) {
-
-	$.getJSON("/api/tac/user/byid/" + data['id'], function (infos) {
-
-		tac_login = infos['email'].split("@")[0];
-		if (login != "") {
-			if ((tac_login != "") && (tac_login != login))
-			{
-				warn("TAC Login mismatch: " + login + " != " + tac_login)
-				return
-			}
-		} else {
-			login = tac_login;
-		}
-
-		$("#p_name").text(data['name']);
-		$("#p_company").text(data['company']);
-
-		$("#ca_id").text(data['id']);
-		$("#ca_name").text(data['name']);
-		$("#ca_company").text(data['company']);
-
-		$("#p_email").text(infos['email']);
-		$("#ca_email").text(infos['email']);
-		$("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + login);
-
-		$.getJSON("/api/tac/profile/byid/" + data['id'], function (profiles) {
-		  //alert(profiles);
-		  var names = profiles.map(p => p.name);
-		  $("#ca_profiles").text(names.join(", "));
-		});
-		$.getJSON("/api/tac/tags/byid/" + data['id'], function (tags) {
-		  var ids = tags.map(p => formatTag(p.id));
-		  $("#ca_tags").html(ids.join(", "));
-		});
-
-	});
-
-}
-
-function  tac_by_email(q_email, success) {
-  if (q_email.length < 4)
-  {
-    warn('TAC Search LOGIN is too short');
-    return ;
-  }
-    
-  $.getJSON("/api/tac/user/byemail/" + q_email, function (data) {
-      if ((data == null) || (data[0]['id'] == null)) {
-        warn('TAC Search LOGIN returned nothing');
-        return ;
-      }
-      else
-      {
-	i = 0;
-	while (data[i] != null) {
-	  var j = i;
-          $.getJSON("/api/tac/user/byid/" + data[i]['id'], function (infos) {
-            if (infos['email'].substring(0, q_email.length) == q_email) {
-              fill_tac_data(data[j]);
-            }
-	  });
-          i++;
-	}
-	if (success != null) {
-	  success();
-	}
-      }
-  });
-}
-
-function  tac_by_rfid(q_rfid, success) {
-    $.getJSON("/api/tac/user/byrfid/" + q_rfid, function (data) {
-      if ((data == null) || (data['id'] == null)) {
-        warn('TAC Search RFID returned nothing');
-        return ;
-      }
-      else
-      {
-        fill_tac_data(data);
-		if (success != null) {
-	  		success();
-		}
-      }
-  });
-}
-
-function l(l) {
-  $("#auto").html("");
-  $("#login").val(l);
-  submitForm();
-}
-
-function auto_complete_sort(a, b) {
-  f = 'cn';
-  return (a[f] == b[f] ? 0 : (a[f] > b[f] ? 1 : -1));
-}
-
-function auto_complete(q) {
-
-  if (q.length < 5) {
-    $("#auto").html("need more chars to complete <b>" + q + "</b>");
-    return ;
-  }
-
-  $.getJSON("/api/ldap/autocomplete/" + q, function (data) {
-    if (data != null) {
-      data.sort(auto_complete_sort);
-      $("#auto").html("");
-      for (i = 0; data[i] != null; i++) {
-        tmp = data[i]['dn'].split(",")[0].split("=")[1];
-        $("#auto").append("<span onclick=\"l('" + tmp + "')\">" + data[i]['cn'] + " <b>" + data[i]['dn'] + "</b></span><br />\n");
-      }
-    }
-    else
-    {
-	$("#auto").html("no match for <b>" + q + "</b>");
-    }
-  }).fail(function() {
-    $("#auto").html("query failed for <b>" + q + "</b>");
-  });
-}
+rfid = "{{.Rfid}}";
+login = "{{.Login}}";
+photo_url = "{{ .Conf.PhotoUrl }}";
 
 //
 // <!-- MAIN -->
@@ -303,14 +88,6 @@ $(function () {
 
 
 });
-
-function submitForm() {
-  if ($("#login").val() != "")
-    document.location.href = "/profile/login/" + $("#login").val().trim();
-  else
-    document.location.href = "/profile/rfid/" + $("#rfid").val().trim();
-}
-
 
 </script>
 
@@ -469,7 +246,7 @@ function submitForm() {
 		  <div class="input-group">
 		    <div class="input-group-prepend">
 		      <span class="input-group-text">
-	 	        <i class="material-icons">face</i>
+	 	        <i class="material-icons" title="cn">face</i>
 	          </span>
 		    </div>
 		    <span id="ldap_cn"></span>
@@ -478,7 +255,7 @@ function submitForm() {
 		  <div class="input-group">
 		    <div class="input-group-prepend">
 		      <span class="input-group-text">
-	 	        <i class="material-icons">list_alt</i>
+	 	        <i class="material-icons" title="dn">list_alt</i>
               </span>
 		    </div>
 		    <span id="ldap_dn"></span>
@@ -487,7 +264,7 @@ function submitForm() {
 		  <div class="input-group">
 		    <div class="input-group-prepend">
 		      <span class="input-group-text">
-	 	        <i class="material-icons">credit_card</i>
+	 	        <i class="material-icons" title="rfid">credit_card</i>
               </span>
 		    </div>
 		    <span id="ldap_rfid"></span>
@@ -496,10 +273,19 @@ function submitForm() {
 		  <div class="input-group">
 		    <div class="input-group-prepend">
 		      <span class="input-group-text">
-	 	        <i class="material-icons">fiber_pin</i>
+	 	        <i class="material-icons" title="pin">fiber_pin</i>
               </span>
 		    </div>
 		    <span id="ldap_pin"></span>
+		  </div>
+		  <!-- LDAP promo -->
+		  <div class="input-group">
+		    <div class="input-group-prepend">
+		      <span class="input-group-text">
+	 	        <i class="material-icons" title="promo">school</i>
+              </span>
+		    </div>
+		    <span id="ldap_promo"></span>
 		  </div>
 		</div>
       </div>
@@ -550,8 +336,10 @@ function submitForm() {
 		    </div>
 		    <span id="bank_balance">-.--</span> &euro;
 		  </div>
-		  <!-- BANK refund -->
 
+
+		  <!-- BANK refund -->
+		  <!--
 		  <div class="input-group">
 		    <div class="input-group-prepend">
 		      <span class="input-group-text">
@@ -565,9 +353,18 @@ function submitForm() {
 				  <span class="form-check-sign">
                     <span class="check"></span>
                   </span>
-
 			</div>
 		  </div>
+		-->
+
+		  <!-- BANK refund -->
+		    <div class="togglebutton">
+		      <label>
+			    <input type="checkbox" id="bank_refund" />
+				<span class="toggle"></span>
+				refund 
+	           </label>
+			</div>
 
 		</div>
       </div>

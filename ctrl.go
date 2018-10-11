@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/tls"
-//	"encoding/json"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,12 +13,82 @@ import (
 )
 
 type Ctrl struct {
-	url      string
-	host     string
-	cookie   http.Cookie
-	jar      *cookiejar.Jar
-	loggedOn bool
-	last     time.Time
+	url      	string
+	host     	string
+	cookie   	http.Cookie
+	jar      	*cookiejar.Jar
+	loggedOn 	bool
+	last     	time.Time
+	smList 		map[string]CtrlSmItem
+}
+
+type CtrlSm struct {
+	ID              string        `json:"id"`
+	Name            string        `json:"name"`
+	Smclass         string        `json:"smclass"`
+	WiringSchemaURL string        `json:"wiringSchemaUrl"`
+	Label           string        `json:"label"`
+	Desc            string        `json:"desc"`
+	Metadata        interface{}   `json:"metadata"`
+}
+
+type CtrlSmAction struct {
+	Label 	string
+	Script 	string
+}
+
+type CtrlSmItem struct{
+	Host 	string
+	Name 	string
+	Smclass string
+	Label   string
+	Actions map[string]CtrlSmAction
+}
+
+func (c *Ctrl) GetSmList() (code int, body string) {
+	var sms []CtrlSm
+	var meta map[string]interface {}
+	var actions map[string]interface{}
+	var action map[string]interface{}
+	var ok bool
+
+	code, body = c.Request("taction_get_sm_list", []string{"sm"})
+	res := c.ParseResponse(body)
+	err := json.Unmarshal([]byte(res), &sms)
+	if err != nil {
+		fmt.Println("json decode error: %s", err.Error())
+		return code, ""
+	}
+	i := 0
+	for i < len(sms) {
+
+		if _, ok = c.smList[sms[i].ID]; !ok {
+			c.smList[sms[i].ID] = CtrlSmItem{}
+		}
+		s := c.smList[sms[i].ID]
+		s.Host = c.GetHost()
+		s.Name = sms[i].Name
+		s.Smclass = sms[i].Smclass
+		s.Label = sms[i].Label
+		meta, ok = sms[i].Metadata.(map[string]interface {})
+		if ok {
+			actions, ok = meta["actions"].(map[string]interface{})
+			if ok {
+				s.Actions = make(map[string]CtrlSmAction)
+				for k := range actions {
+					action, ok = actions[k].(map[string]interface{})
+					a := s.Actions[k]
+					a.Label = action["label"].(string)
+					a.Script = action["script"].(string)
+					s.Actions[k] = a
+				}
+			}
+		}
+		c.smList[sms[i].ID] = s
+		i++
+	}
+	fmt.Printf("smList: %v\n", c.smList)
+	return code, res
 }
 
 func (c *Ctrl) SetCredentials(ctrl_url string, jar *cookiejar.Jar) {
@@ -26,6 +96,7 @@ func (c *Ctrl) SetCredentials(ctrl_url string, jar *cookiejar.Jar) {
 	c.loggedOn = false
 	c.jar = jar
 	c.last = time.Now()
+	c.smList = make(map[string]CtrlSmItem)
 	fmt.Printf("ctrl url: %s...\n", c.url)
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = 
 		&tls.Config{InsecureSkipVerify: true}
@@ -62,14 +133,14 @@ func (c *Ctrl) RequestEx(action string, params []string,
 		fmt.Printf("%s failed: %s\n", action, err.Error())
 		return -1, ""
 	}
-	fmt.Println(resp.Status)
+	//fmt.Println(resp.Status)
 	defer resp.Body.Close()
 	contents, err2 := ioutil.ReadAll(resp.Body)
 	if err2 != nil {
 		fmt.Println("%s", err)
 		return -2, ""
 	}
-	fmt.Printf("%s\n", string(contents))
+	//fmt.Printf("%s\n", string(contents))
 	return resp.StatusCode, string(contents)
 }
 
@@ -96,16 +167,10 @@ func (c *Ctrl) ParseResponse(body string) string {
 	r, _ := regexp.Compile(`\[(.*),\s+\]`)
 	res := r.FindStringSubmatch(body)
 	if res != nil {
-		for index, match := range res {
-			fmt.Printf("[%d] %s\n", index, match)
-		}
+		//for index, match := range res {
+			//fmt.Printf("[%d] %s\n", index, match)
+		//}
 		return "["+res[1]+"]"
 	}
 	return "{}"
-}
-
-func (c *Ctrl) GetSmList() (code int, body string) {
-	code, body = c.Request("taction_get_sm_list", []string{"sm"})
-	res := c.ParseResponse(body)
-	return code, res
 }

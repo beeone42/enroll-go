@@ -404,8 +404,8 @@ func apiGetCtrlSmList(w http.ResponseWriter, r *http.Request) {
 		ctrl.SetHost(host)
 	}
 	ctrl.Login()
-	_, body := ctrl.GetSmList()
-	fmt.Fprintf(w, "%s", body)
+	ctrl.GetSmList()
+	json.NewEncoder(w).Encode(ctrl.smList)
 	return
 }
 

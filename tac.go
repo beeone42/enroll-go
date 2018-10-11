@@ -62,6 +62,10 @@ type TacLastTagRead struct {
 	Ldap []map[string]string
 }
 
+func (t *Tac) GetJar() (jar *cookiejar.Jar) {
+	return t.jar
+}
+
 func (t *Tac) SetCredentials(tac_url, login, passwd string) {
 	fmt.Printf("set creds...\n")
 	t.url = tac_url
@@ -265,4 +269,16 @@ func (t *Tac) GetLastTagReadEx(porte_id1, porte_id2, event_id string) (code int,
 	} else {
 		return code2, lt2
 	}
+}
+
+func (t *Tac) GetCtrlList() (code int, body string) {
+	code, body = t.RequestEx("taction_get_ctrl_list", []string{},
+		map[string]string{
+			"start":                  "0",
+			"limit":                  "99",
+			"sort":                   "name",
+			"dir":                    "ASC",
+		})
+	res := fmt.Sprintf("[%s]", t.ParseResponse(body))
+	return code, res
 }

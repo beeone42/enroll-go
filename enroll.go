@@ -18,6 +18,7 @@ import (
 
 var bank *Bank
 var tac *Tac
+var ctrl *Ctrl
 var ld *Ldap
 var ls *LdapStaff
 var conf Configuration
@@ -386,6 +387,28 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func apiGetCtrlList(w http.ResponseWriter, r *http.Request) {
+//	if checkSession(w, r) != true { return }
+	tac.Login()
+	_, body := tac.GetCtrlList()
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
+func apiGetCtrlSmList(w http.ResponseWriter, r *http.Request) {
+//	if checkSession(w, r) != true { return }
+	vars := mux.Vars(r)
+	host := vars["host"]
+	tac.Login()
+	if host != ctrl.GetHost() {
+		ctrl.SetHost(host)
+	}
+	ctrl.Login()
+	_, body := ctrl.GetSmList()
+	fmt.Fprintf(w, "%s", body)
+	return
+}
+
 func ldapStaffSearchByLogin(w http.ResponseWriter, r *http.Request) {
 	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
@@ -467,6 +490,7 @@ func main() {
 	r := mux.NewRouter()
 	bank = &Bank{}
 	tac = &Tac{}
+	ctrl = &Ctrl{}
 	ld = &Ldap{}
 	ls = &LdapStaff{}
 	conf = Configuration{}
@@ -479,6 +503,7 @@ func main() {
 
 	bank.SetCredentials(conf.BankUrl, conf.BankVendor, conf.BankKey)
 	tac.SetCredentials(conf.CaUrl, conf.CaUser, conf.CaPass)
+	ctrl.SetCredentials(conf.CaUrl, tac.GetJar())
 
 	ld.Init(conf)
 	ld.Connect()
@@ -520,6 +545,8 @@ func main() {
 
 	r.HandleFunc("/api/ldapstaff/bylogin/{login}", ldapStaffSearchByLogin)
 
+	r.HandleFunc("/api/tac/ctrl", apiGetCtrlList)
+	r.HandleFunc("/api/tac/ctrl/{host}", apiGetCtrlSmList)
 	r.HandleFunc("/api/tac/user/byrfid/{rfid}", apiGetUserByRfid)
 	r.HandleFunc("/api/tac/user/byid/{id}", apiGetUserById)
 	r.HandleFunc("/api/tac/user/byemail/{email}", apiGetUsersByEmail)

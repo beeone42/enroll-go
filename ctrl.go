@@ -39,35 +39,32 @@ type CtrlSmAction struct {
 
 type CtrlSmItem struct{
 	Host 	string
-	Name 	string
+	ID 		string
 	Smclass string
 	Label   string
 	Actions map[string]CtrlSmAction
 }
 
-func (c *Ctrl) GetSmList() (code int, body string) {
+func (c *Ctrl) GetSmList() (bool) {
 	var sms []CtrlSm
 	var meta map[string]interface {}
 	var actions map[string]interface{}
 	var action map[string]interface{}
 	var ok bool
 
-	code, body = c.Request("taction_get_sm_list", []string{"sm"})
+	_, body := c.Request("taction_get_sm_list", []string{"sm"})
 	res := c.ParseResponse(body)
 	err := json.Unmarshal([]byte(res), &sms)
 	if err != nil {
 		fmt.Println("json decode error: %s", err.Error())
-		return code, ""
+		return false
 	}
 	i := 0
 	for i < len(sms) {
 
-		if _, ok = c.smList[sms[i].ID]; !ok {
-			c.smList[sms[i].ID] = CtrlSmItem{}
-		}
-		s := c.smList[sms[i].ID]
+		s := CtrlSmItem{}
 		s.Host = c.GetHost()
-		s.Name = sms[i].Name
+		s.ID = sms[i].ID
 		s.Smclass = sms[i].Smclass
 		s.Label = sms[i].Label
 		meta, ok = sms[i].Metadata.(map[string]interface {})
@@ -84,11 +81,11 @@ func (c *Ctrl) GetSmList() (code int, body string) {
 				}
 			}
 		}
-		c.smList[sms[i].ID] = s
+		c.smList[sms[i].Name] = s
 		i++
 	}
 	fmt.Printf("smList: %v\n", c.smList)
-	return code, res
+	return true
 }
 
 func (c *Ctrl) SetCredentials(ctrl_url string, jar *cookiejar.Jar) {
@@ -105,6 +102,7 @@ func (c *Ctrl) SetCredentials(ctrl_url string, jar *cookiejar.Jar) {
 func (c *Ctrl) SetHost(ctrl_host string) {
 	c.host = ctrl_host
 	c.loggedOn = false
+	c.smList = make(map[string]CtrlSmItem)
 }
 
 func (c *Ctrl) GetHost() (host string) {

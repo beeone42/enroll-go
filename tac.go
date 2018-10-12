@@ -271,8 +271,10 @@ func (t *Tac) GetLastTagReadEx(porte_id1, porte_id2, event_id string) (code int,
 	}
 }
 
-func (t *Tac) GetCtrlList() (code int, body string) {
-	code, body = t.RequestEx("taction_get_ctrl_list", []string{},
+func (t *Tac) GetCtrlList() (interface{}) {
+	var l []interface{}
+
+	_, body := t.RequestEx("taction_get_ctrl_list", []string{},
 		map[string]string{
 			"start":                  "0",
 			"limit":                  "99",
@@ -280,5 +282,11 @@ func (t *Tac) GetCtrlList() (code int, body string) {
 			"dir":                    "ASC",
 		})
 	res := fmt.Sprintf("[%s]", t.ParseResponse(body))
-	return code, res
+	err := json.Unmarshal([]byte(res), &l)
+	if err != nil {
+		fmt.Println("json decode error: %s", err.Error())
+		return nil
+	}
+
+	return l
 }

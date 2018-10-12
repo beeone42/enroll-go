@@ -388,24 +388,47 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetCtrlList(w http.ResponseWriter, r *http.Request) {
-//	if checkSession(w, r) != true { return }
+	//if checkSession(w, r) != true { return }
 	tac.Login()
-	_, body := tac.GetCtrlList()
-	fmt.Fprintf(w, "%s", body)
+	ctrlList := tac.GetCtrlList()
+	json.NewEncoder(w).Encode(ctrlList)
 	return
 }
 
 func apiGetCtrlSmList(w http.ResponseWriter, r *http.Request) {
-//	if checkSession(w, r) != true { return }
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	host := vars["host"]
 	tac.Login()
+	ctrl.Lock()
+	defer ctrl.Unlock()
 	if host != ctrl.GetHost() {
 		ctrl.SetHost(host)
 	}
 	ctrl.Login()
 	ctrl.GetSmList()
-	json.NewEncoder(w).Encode(ctrl.smList)
+	json.NewEncoder(w).Encode(ctrl.FilterSmList(ctrl.smList, host))
+	return
+}
+
+func apiBuildSmCache() {
+	var ctrlList CtrlList
+	var ok bool
+
+	ctrlList, ok = tac.GetCtrlList().(CtrlList)
+	if ok {
+		fmt.Println(ctrlList)
+	}
+}
+
+func apiDoAction(w http.ResponseWriter, r *http.Request) {
+//	if checkSession(w, r) != true { return }
+	tac.Login()
+	vars := mux.Vars(r)
+	id := vars["id"]
+	action := vars["action"]
+	_, body := ctrl.DoAction(id, action)
+	fmt.Fprintf(w, "%s", body)
 	return
 }
 
@@ -547,6 +570,7 @@ func main() {
 
 	r.HandleFunc("/api/tac/ctrl", apiGetCtrlList)
 	r.HandleFunc("/api/tac/ctrl/{host}", apiGetCtrlSmList)
+	r.HandleFunc("/api/tac/action/{id}/{action}", apiDoAction)
 	r.HandleFunc("/api/tac/user/byrfid/{rfid}", apiGetUserByRfid)
 	r.HandleFunc("/api/tac/user/byid/{id}", apiGetUserById)
 	r.HandleFunc("/api/tac/user/byemail/{email}", apiGetUsersByEmail)

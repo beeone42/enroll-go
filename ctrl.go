@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"time"
+	"sync"
 )
 
 type Ctrl struct {
@@ -20,6 +21,13 @@ type Ctrl struct {
 	loggedOn 	bool
 	last     	time.Time
 	smList 		map[string]CtrlSmItem
+	mux			sync.Mutex
+}
+
+type CtrlList []struct {
+	Host string `json:"host"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type CtrlSm struct {
@@ -45,6 +53,45 @@ type CtrlSmItem struct{
 	Actions map[string]CtrlSmAction
 }
 
+func (c *Ctrl) Lock() {
+	c.mux.Lock()
+}
+
+func (c *Ctrl) Unlock() {
+	c.mux.Unlock()
+}
+
+func (c *Ctrl) DoAction(id, action string) (code int, body string) {
+	var sm CtrlSmItem
+	var act CtrlSmAction
+	var ok bool
+
+	sm, ok = c.smList[id]
+	if !ok {
+		return -1, "id not found"
+	}
+	c.SetHost(sm.Host)
+	c.Login()
+	act, ok = sm.Actions[action]
+	if !ok {
+		return -2, "action not found"
+	}
+	code, body = c.Request("taction_command_sm", []string{sm.ID, act.Script})
+	return code, body
+}
+
+func (c *Ctrl) FilterSmList(sl map[string]CtrlSmItem, host string) (map[string]CtrlSmItem) {
+	var res map[string]CtrlSmItem
+
+	res = make(map[string]CtrlSmItem)
+	for id := range sl {
+		if sl[id].Host == host {
+			res[id] = sl[id]
+		}
+	}
+	return res
+}
+
 func (c *Ctrl) GetSmList() (bool) {
 	var sms []CtrlSm
 	var meta map[string]interface {}
@@ -61,7 +108,6 @@ func (c *Ctrl) GetSmList() (bool) {
 	}
 	i := 0
 	for i < len(sms) {
-
 		s := CtrlSmItem{}
 		s.Host = c.GetHost()
 		s.ID = sms[i].ID
@@ -100,9 +146,10 @@ func (c *Ctrl) SetCredentials(ctrl_url string, jar *cookiejar.Jar) {
 }
 
 func (c *Ctrl) SetHost(ctrl_host string) {
-	c.host = ctrl_host
-	c.loggedOn = false
-	c.smList = make(map[string]CtrlSmItem)
+	if c.host != ctrl_host {
+		c.host = ctrl_host
+		c.loggedOn = false
+	}
 }
 
 func (c *Ctrl) GetHost() (host string) {

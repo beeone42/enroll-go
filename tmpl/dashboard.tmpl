@@ -5,16 +5,16 @@
 
 checkSession();
 
-function a(id, act) {
-	$.get("/api/tac/action/" + id + "/" + act, function (res) {
+function a(name, act) {
+	$.get("/api/tac/action/" + name + "/" + act, function (res) {
 		console.log(res);
 	});
 }
 
-function buildActions(id, actions) {
+function buildActions(id, name, actions) {
 	res = '';
 	for (var act in actions) {
-		res += '<a style="cursor: pointer;" onclick="a(\'' + id + '\',\'' + act + '\')">' + act + '</a> ';
+		res += '<a style="cursor: pointer;" onclick="a(\'' + name + '\',\'' + act + '\')" href="#' + id + '">' + act + '</a> ';
 	}
 	return (res);
 }
@@ -24,8 +24,8 @@ function getSmList(ctrl)
 	$.when(
 		$.getJSON("/api/tac/ctrl/" + ctrl[0]['host'], function (smlist) {
 			console.log(typeof(smlist));
-			for (var id in smlist) {
-				$("#" + ctrl[0]['id']).append('<p>' + id + ' ' + buildActions(id, smlist[id]['Actions']) + '</p>' );
+			for (var name in smlist) {
+				$("#" + ctrl[0]['id']).append('<p>' + name + ' ' + buildActions(smlist[name]['ID'], name, smlist[name]['Actions']) + '</p>' );
 			}
 	    })
 	).then(function (){

@@ -28,6 +28,8 @@ type SipassConf struct {
 	Cam		string
 	Pid1 	string
 	Pid2 	string
+	Name1 	string
+	Name2 	string
 }
 
 type Configuration struct {

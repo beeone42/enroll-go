@@ -11,12 +11,16 @@
 		"hall":	{
 			"cam":	"http://cam.domain.com/cam-hall.jpg",
 			"pid1":	"abcdef-1234-5678-entrance1",
-			"pid2":	"abcdef-1234-5678-entrance2"
+			"pid2":	"abcdef-1234-5678-entrance2",
+			"name1": "A01-ENTREE-1",
+			"name2": "A02-ENTREE-2"
 		},
 		"office":	{
 			"cam":	"http://cam.domain.com/cam-office.jpg",
 			"pid1":	"abcdef-1234-5678-office",
-			"pid2":	""
+			"pid2":	"",
+			"name1": "A03-OFFICE",
+			"name2": ""
 		}
 	},
 	"SipassDefault":	"hall",

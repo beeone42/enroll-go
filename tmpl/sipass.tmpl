@@ -12,6 +12,8 @@ var last_id = 0;
 var cam = conf.Cam
 var porte_id1 = conf.Pid1
 var porte_id2 = conf.Pid2
+var porte_name1 = conf.Name1
+var porte_name2 = conf.Name2
 
 // e489bace-68c4-11e3-ad63-3a1f34420001  // bocal
 // abcb29a2-d5ca-11e3-853e-3a1f34420001  // entree-1
@@ -19,6 +21,14 @@ var porte_id2 = conf.Pid2
 // 7d7fe094-d528-11e3-b492-3a1f34420001  // sortie-1
 // b3fd935a-d528-11e3-b492-3a1f34420001  // sortie-2
 
+
+function open_door(name, act) {
+  if (name != "")
+    return ;
+  $.get("/api/tac/action/" + name + "/" + act, function (res) {
+    console.log(res);
+  });
+}
 
 function update_datas(porte_id1, porte_id2, event_id)
 {
@@ -94,7 +104,9 @@ $(function () {
     		  <div class="card-icon">
     		    <i class="material-icons">search</i>
     		  </div>
-    		  <h4 class="card-title">{{.Sipass}}</h4>
+    		  <h4 class="card-title">{{.Sipass}}
+            [<span style="cursor: pointer;" onclick="open_door(porte_name1, 'open');">=</span>|<span style="cursor: pointer;" onclick="open_door(porte_name2, 'open');">=</span>]
+          </h4>
     		</div>
     		<div class="card-body">
 

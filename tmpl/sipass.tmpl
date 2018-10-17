@@ -23,10 +23,14 @@ var porte_name2 = conf.Name2
 
 
 function open_door(name, act) {
-  if (name != "")
+  if (name == "") {
+    warn("empty door name");
     return ;
+  }
+  info("Sending " + act + " to " + name);
   $.get("/api/tac/action/" + name + "/" + act, function (res) {
     console.log(res);
+    success(act + " sent to " + name + ": " + res);
   });
 }
 

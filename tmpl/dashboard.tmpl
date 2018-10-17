@@ -6,9 +6,15 @@
 checkSession();
 
 function a(name, act) {
-	$.get("/api/tac/action/" + name + "/" + act, function (res) {
-		console.log(res);
-	});
+  if (name == "") {
+    warn("empty door name");
+    return ;
+  }
+  info("Sending " + act + " to " + name);
+  $.get("/api/tac/action/" + name + "/" + act, function (res) {
+    console.log(res);
+    success(act + " sent to " + name + ": " + res);
+  });
 }
 
 function buildActions(id, name, actions) {

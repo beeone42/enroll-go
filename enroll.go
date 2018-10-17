@@ -401,6 +401,13 @@ func apiGetCtrlSmList(w http.ResponseWriter, r *http.Request) {
 	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	host := vars["host"]
+
+	tmp := ctrl.FilterSmList(ctrl.smList, host)
+	if len(tmp) > 0 {
+		json.NewEncoder(w).Encode(tmp)
+		return
+	}
+
 	tac.Login()
 	ctrl.Lock()
 	defer ctrl.Unlock()

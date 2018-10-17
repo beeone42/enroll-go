@@ -22,6 +22,11 @@ function warn(msg)
 
 function info(msg)
 {
+  show_message("info", msg)
+}
+
+function success(msg)
+{
   show_message("success", msg)
 }
 

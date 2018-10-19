@@ -130,7 +130,7 @@ func (c *Ctrl) GetSmList() (bool) {
 		c.smList[sms[i].Name] = s
 		i++
 	}
-	fmt.Printf("smList: %v\n", c.smList)
+	//fmt.Printf("smList: %v\n", c.smList)
 	return true
 }
 
@@ -172,20 +172,17 @@ func (c *Ctrl) RequestEx(action string, params []string,
 	for k := range paramsEx { v.Add(k, paramsEx[k])	}
 	fmt.Println("v: %#v", v)
 	fullurl = c.url+"action.php?url=https%3A%2F%2F"+c.host+"%2FLMC%2Faction.php"
-	fmt.Println(fullurl)
 	resp, err := client.PostForm(fullurl, v)
 	if err != nil {
 		fmt.Printf("%s failed: %s\n", action, err.Error())
 		return -1, ""
 	}
-	//fmt.Println(resp.Status)
 	defer resp.Body.Close()
 	contents, err2 := ioutil.ReadAll(resp.Body)
 	if err2 != nil {
 		fmt.Println("%s", err)
 		return -2, ""
 	}
-	//fmt.Printf("%s\n", string(contents))
 	return resp.StatusCode, string(contents)
 }
 
@@ -212,9 +209,6 @@ func (c *Ctrl) ParseResponse(body string) string {
 	r, _ := regexp.Compile(`\[(.*),\s+\]`)
 	res := r.FindStringSubmatch(body)
 	if res != nil {
-		//for index, match := range res {
-			//fmt.Printf("[%d] %s\n", index, match)
-		//}
 		return "["+res[1]+"]"
 	}
 	return "{}"

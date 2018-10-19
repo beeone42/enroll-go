@@ -6,6 +6,7 @@ import (
 	"gopkg.in/ldap.v2"
 	"time"
 	"crypto/tls"
+	"strings"
 )
 
 type LdapStaff struct {
@@ -26,6 +27,15 @@ func (l *LdapStaff) Init(conf Configuration) {
 }
 
 func (l *LdapStaff) Auth(login, passwd string) (bool, error) {
+	l.Connect()
+	tmp := strings.Split(login, "@")
+	entries, err := l.Search(strings.Replace("(sAMAccountName={login})", "{login}", tmp[0], -1))
+	if err != nil {
+		return false, err
+	}
+	if len(entries) == 0 {
+		return false, nil
+	}
 	l.Close()
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	conn, err := ldap.DialTLS("tcp", l.server, tlsConfig)
@@ -35,6 +45,8 @@ func (l *LdapStaff) Auth(login, passwd string) (bool, error) {
 	if err := conn.Bind(login, passwd); err != nil {
 		return false, fmt.Errorf("Failed to bind. %s", err)
 	}
+	l.bindUser = login
+	l.bindPass = passwd
 	return true, nil
 }
 
@@ -120,6 +132,7 @@ func (l *LdapStaff) Search(query string) ([]*ldap.Entry, error) {
 		l.Close()
 		return nil, err
 	}
+	fmt.Println(l.JsonEntries(sr.Entries))
 	l.last = time.Now()
 	return sr.Entries, nil
 }

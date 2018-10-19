@@ -222,7 +222,7 @@ func apiCheck(w http.ResponseWriter, r *http.Request) {
 
 
 func bankByLogin(w http.ResponseWriter, r *http.Request) {
-//	if checkSession(w, r) != true { return }
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	login := vars["login"]
 	_, body := bank.GetUserInfosByLogin(login)
@@ -231,7 +231,7 @@ func bankByLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func bankByRfid(w http.ResponseWriter, r *http.Request) {
-//	if checkSession(w, r) != true { return }
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	rfid := vars["rfid"]
 	_, body := bank.GetUserInfosByRfid(rfid)
@@ -240,7 +240,7 @@ func bankByRfid(w http.ResponseWriter, r *http.Request) {
 }
 
 func bankRefundByLogin(w http.ResponseWriter, r *http.Request) {
-//	if checkSession(w, r) != true { return }
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	login := vars["login"]
 	refund := vars["refund"]
@@ -248,8 +248,6 @@ func bankRefundByLogin(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", body)
 	return
 }
-
-
 
 func apiGetUserByRfid(w http.ResponseWriter, r *http.Request) {
 	if checkSession(w, r) != true { return }
@@ -330,7 +328,6 @@ func apiGetLastTagReadEx(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-
 func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 	if checkSession(w, r) != true { return }
 	var entries []*ldap.Entry
@@ -364,16 +361,14 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 			_, infos = tac.GetUserByTag(r_rfid)
 		}
 
-
-
-		fmt.Println("%#v", infos)
+		//fmt.Println("%#v", infos)
 		err = json.Unmarshal([]byte(infos), &lt.Tac)
 		if err != nil {
 			fmt.Fprintf(w, "{\"result\":\"error\"}")
 		}
 
 		search = strings.Replace("(badgeRfid={rfid})", "{rfid}", r_rfid, -1)
-		fmt.Println("ldap search rfid: ", search)
+		//fmt.Println("ldap search rfid: ", search)
 
 		entries, err = ld.Search(search)
 		for _, entry := range entries {
@@ -390,7 +385,7 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetCtrlList(w http.ResponseWriter, r *http.Request) {
-	//if checkSession(w, r) != true { return }
+	if checkSession(w, r) != true { return }
 	tac.Login()
 	ctrlList := tac.GetCtrlList()
 	json.NewEncoder(w).Encode(ctrlList)
@@ -407,7 +402,6 @@ func apiGetCtrlSmList(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(tmp)
 		return
 	}
-
 	tac.Login()
 	ctrl.Lock()
 	defer ctrl.Unlock()
@@ -431,7 +425,7 @@ func apiBuildSmCache() {
 }
 
 func apiDoAction(w http.ResponseWriter, r *http.Request) {
-//	if checkSession(w, r) != true { return }
+	if checkSession(w, r) != true { return }
 	tac.Login()
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -442,7 +436,7 @@ func apiDoAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func ldapStaffSearchByLogin(w http.ResponseWriter, r *http.Request) {
-	if checkSession(w, r) != true { return }
+	//if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	login := vars["login"]
 	search := strings.Replace("(sAMAccountName={login})", "{login}", login, -1)

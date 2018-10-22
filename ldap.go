@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gopkg.in/ldap.v2"
-	"time"
 	"strings"
+	"time"
 )
 
 type Ldap struct {
@@ -41,6 +42,7 @@ func (l *Ldap) Connect() (*ldap.Conn, error) {
 		return nil, fmt.Errorf("Failed to connect. %s", err)
 	}
 	if err := conn.Bind(l.bindUser, l.bindPass); err != nil {
+		conn.Close()
 		return nil, fmt.Errorf("Failed to bind. %s", err)
 	}
 	l.last = time.Now()
@@ -96,6 +98,9 @@ func (l *Ldap) JsonEntries(entries []*ldap.Entry) string {
 
 func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
 	l.Connect()
+	if l.conn == nil {
+		return nil, nil
+	}
 	searchRequest := ldap.NewSearchRequest(
 		l.baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
@@ -117,7 +122,7 @@ func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
 func (l *Ldap) GetDn(query string) (string, error) {
 	entries, err := l.Search(query)
 	if err != nil {
-		return "error", err
+		return "", err
 	}
 	if len(entries) > 0 {
 		res := l.MapEntry(entries[0])
@@ -128,17 +133,20 @@ func (l *Ldap) GetDn(query string) (string, error) {
 
 func (l *Ldap) Enroll(login string, rfid string) (string, error) {
 	l.Connect()
+	if l.conn == nil {
+		return "", errors.New("connect error")
+	}
 	search := strings.Replace("(uid={login})", "{login}", login, -1)
 	dn, err := l.GetDn(search)
 	if err != nil {
-		return "error", err
+		return "", err
 	}
 	modify := ldap.NewModifyRequest(dn)
 	modify.Replace("badgeRfid", []string{rfid})
 	err = l.conn.Modify(modify)
 	if err != nil {
 		l.Close()
-		return "error", err
+		return "", err
 	}
 	return "ok", nil
 }

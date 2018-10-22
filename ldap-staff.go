@@ -1,12 +1,13 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gopkg.in/ldap.v2"
-	"time"
-	"crypto/tls"
 	"strings"
+	"time"
 )
 
 type LdapStaff struct {
@@ -68,6 +69,7 @@ func (l *LdapStaff) Connect() (*ldap.Conn, error) {
 	}
 	if err := conn.Bind(l.bindUser, l.bindPass); err != nil {
 		fmt.Println("LDAP STAFF Bind FAIL")
+		conn.Close()
 		return nil, fmt.Errorf("Failed to bind. %s", err)
 	}
 	l.last = time.Now()
@@ -119,7 +121,7 @@ func (l *LdapStaff) JsonEntries(entries []*ldap.Entry) string {
 func (l *LdapStaff) Search(query string) ([]*ldap.Entry, error) {
 	l.Connect()
 	if l.conn == nil {
-		return nil, nil
+		return nil, errors.New("connect error")
 	}
 	searchRequest := ldap.NewSearchRequest(
 		l.baseDn,

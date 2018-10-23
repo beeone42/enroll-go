@@ -142,6 +142,7 @@ func (t *Tac) Login() {
 		fmt.Printf("Login 1 failed: %s\n", err.Error())
 		return
 	}
+	defer resp.Body.Close()
 
 	fmt.Printf("login on %s with %s:%s creds: %s\n", t.url, t.login, t.passwd, resp.Status)
 
@@ -158,6 +159,7 @@ func (t *Tac) Login() {
 		fmt.Printf("Login 2 failed: %s\n", err2.Error())
 		return
 	}
+	defer resp2.Body.Close()
 	fmt.Println(resp2.Status)
 	t.last = time.Now()
 	t.loggedOn = true

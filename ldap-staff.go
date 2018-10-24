@@ -35,7 +35,7 @@ func (l *LdapStaff) Auth(login, passwd string) (bool, error) {
 		return false, err
 	}
 	if len(entries) == 0 {
-		return false, nil
+		return false, fmt.Errorf("Failed to find %s in ldap staff", tmp[0])
 	}
 	l.Close()
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
@@ -44,7 +44,7 @@ func (l *LdapStaff) Auth(login, passwd string) (bool, error) {
 		return false, fmt.Errorf("Failed to connect. %s", err)
 	}
 	if err := conn.Bind(login, passwd); err != nil {
-		return false, fmt.Errorf("Failed to bind. %s", err)
+		return false, fmt.Errorf("Failed to bind %s. %s", login, err)
 	}
 	l.bindUser = login
 	l.bindPass = passwd

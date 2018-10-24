@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 	"os"
 	"strconv"
 	"strings"
@@ -169,14 +170,16 @@ func apiLogin(w http.ResponseWriter, r *http.Request) {
 	res := make(map[string]string)
 	login := r.FormValue("login")
 	passwd := r.FormValue("passwd")
-	auth, _ := ls.Auth(login, passwd)
+	auth, err := ls.Auth(login, passwd)
 
+	res["auth"] = "false"
+	if err != nil {
+		fmt.Println(err)
+	}
 	if auth {
 		res["auth"] = "true"
 		res["token"] = tokenGenerator()
 		sessions[res["token"]] = login
-	} else {
-		res["auth"] = "false"
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	json.NewEncoder(w).Encode(res)
@@ -514,6 +517,8 @@ func ldapEnroll(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := mux.NewRouter()
+	http.DefaultClient.Timeout = time.Minute * 5
+
 	bank = &Bank{}
 	tac = &Tac{}
 	ctrl = &Ctrl{}

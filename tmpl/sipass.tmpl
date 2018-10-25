@@ -39,8 +39,10 @@ function update_datas(porte_id1, porte_id2, event_id)
   d = new Date();
   url = "/api/tac/events/bypids/" + porte_id1 + (porte_id2 != "" ? "/" + porte_id2 : "") + "/" + last_id.toString();
 
-  $("#cam").attr("src", cam + "?" + d.getTime())
-
+  if ($(".simple_overlay").css("display") == "none")
+    $("#cam").attr("src", cam + "?" + d.getTime())
+  else
+    $("#image_overlay").attr("src", cam + '?' + d.getTime());
   $.getJSON(url)
   .done(function(data) {
 
@@ -74,6 +76,16 @@ function update_datas(porte_id1, porte_id2, event_id)
 
 $(function () {
     setInterval(function() { update_datas(porte_id1, porte_id2, 0) }, 1000);
+
+    $("#cam").click(function(event) {
+      $("#image_overlay").attr("src", $("#cam").attr("src"));
+      $(".simple_overlay").css("display", "inline");
+    });
+    $("div.content").prepend("<div class='simple_overlay' id='cam_overlay'><img src='" + cam + "' id='image_overlay' class='image'></div>");
+    $(".simple_overlay").click(function() {
+      $("#cam").attr("src", $("#image_overlay").attr("src"));
+      $(".simple_overlay").css("display", "none")
+    });
 });
 
 

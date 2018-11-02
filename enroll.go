@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/tkanos/gonfig"
@@ -19,6 +20,7 @@ import (
 
 var bank *Bank
 var tac *Tac
+var tacdb *TacDb
 var ctrl *Ctrl
 var ld *Ldap
 var ls *LdapStaff
@@ -51,6 +53,7 @@ type Configuration struct {
 	BankUrl		string
 	BankVendor	string
 	BankKey		string
+	DbUrl		string
 }
 
 type Page struct {
@@ -387,6 +390,32 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func apiGetLastUserEvent(w http.ResponseWriter, r *http.Request) {
+	var ts int
+	tacdb.Login()
+	vars := mux.Vars(r)
+	login := vars["login"]
+
+	q := fmt.Sprintf("SELECT ts FROM events WHERE uid = '%s' ORDER BY ts DESC LIMIT 1", login)
+	rows, err := tacdb.Query(q)
+	if err != nil {
+		fmt.Fprintf(w, err.Error())
+		return
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err2 := rows.Scan(&ts)
+		if err2 == sql.ErrNoRows {
+			fmt.Fprintf(w, "never")
+			tacdb.Logout()
+			return
+		}
+	}
+	fmt.Fprintf(w, "%d", ts)
+	tacdb.Logout()
+	return
+}
+
 func apiGetCtrlList(w http.ResponseWriter, r *http.Request) {
 	if checkSession(w, r) != true { return }
 	tac.Login()
@@ -521,6 +550,7 @@ func main() {
 
 	bank = &Bank{}
 	tac = &Tac{}
+	tacdb = &TacDb{}
 	ctrl = &Ctrl{}
 	ld = &Ldap{}
 	ls = &LdapStaff{}
@@ -534,6 +564,7 @@ func main() {
 
 	bank.SetCredentials(conf.BankUrl, conf.BankVendor, conf.BankKey)
 	tac.SetCredentials(conf.CaUrl, conf.CaUser, conf.CaPass)
+	tacdb.SetCredentials(conf.DbUrl)
 	ctrl.SetCredentials(conf.CaUrl, tac.GetJar())
 
 	ld.Init(conf)
@@ -588,6 +619,7 @@ func main() {
 	r.HandleFunc("/api/tac/tags/bypids/{pid1}/{pid2}/{eid}", apiGetLastTagReadEx)
 	r.HandleFunc("/api/tac/events/bypids/{pid}/{eid}", apiGetLastTagReadInfos)
 	r.HandleFunc("/api/tac/events/bypids/{pid}/{pid2}/{eid}", apiGetLastTagReadInfos)
+	r.HandleFunc("/api/tac/events/bylogin/{login}", apiGetLastUserEvent)
 	r.HandleFunc("/sipass", sipass)
 	r.HandleFunc("/sipass/{sipass}", sipass)
 

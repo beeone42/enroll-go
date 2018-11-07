@@ -13,36 +13,32 @@
     <link rel="stylesheet" href="/assets/css/material-dashboard.css">
     <script src="/assets/js/core/jquery.min.js"></script>
     <script src="/assets/js/tools.js"></script>
+    
     <script>
-
-$(function() {
-
-  $("#submitForm").click(function(){
-    l = $("#f_login").val();
-    p = $("#f_password").val();
-    $.post("/api/login", { login: l, passwd: p }, function(data) {
-      console.log(data);
-      if (data["auth"] == "true") {
-        info("auth ok");
-        sessionStorage.setItem('bearer', data["token"]);
-        $.ajaxSetup({headers: {'Authorization' : 'Bearer ' + data["token"]}});
-        $.getJSON('/api/ldapstaff/bylogin/' + l.split("@")[0], function (data) {
-          console.log(data);
-          sessionStorage.setItem('firstname', data[0]["givenname"]);
-          sessionStorage.setItem('lastname', data[0]["sn"]);
-          sessionStorage.setItem('uid', data[0]["uid"]);
-          sessionStorage.setItem('login', l);
-          go("/");
-        })
-      } else {
-        warn("auth failed")
-      }
-    });
-  });
-
-});
-
+    function auth() {
+      l = $("#f_login").val();
+      p = $("#f_password").val();
+      $.post("/api/login", { login: l, passwd: p }, function(data) {
+        console.log(data);
+        if (data["auth"] == "true") {
+          info("auth ok");
+          sessionStorage.setItem('bearer', data["token"]);
+          $.ajaxSetup({headers: {'Authorization' : 'Bearer ' + data["token"]}});
+          $.getJSON('/api/ldapstaff/bylogin/' + l.split("@")[0], function (data) {
+            console.log(data);
+            sessionStorage.setItem('firstname', data[0]["givenname"]);
+            sessionStorage.setItem('lastname', data[0]["sn"]);
+            sessionStorage.setItem('uid', data[0]["uid"]);
+            sessionStorage.setItem('login', l);
+            go("/");
+          })
+        } else {
+          warn("auth failed")
+        }
+      });
+    }
     </script>
+
   </head>
   <body class="off-canvas-sidebar">
     <!-- Navbar -->
@@ -74,7 +70,7 @@ $(function() {
         <div class="page-header login-page header-filter" filter-color="black" style="background-image: url('../../assets/img/login-2.jpg'); background-size: cover; background-position: top center; min-height: 100vh; display: flex; align-items:center">
           <div class="container">
             <div class="col-lg-4 col-md-6 col-sm-6 ml-auto mr-auto">
-              <form class="form" method="" action="">
+              <form class="form" method="" action="javascript:auth()">
                 <div class="card card-login">
                   <div class="card-header card-header-rose text-center">
                     <h4 class="card-title">Login</h4>
@@ -102,7 +98,7 @@ $(function() {
                     </span>
                   </div>
                   <div class="card-footer justify-content-center">
-                    <a id="submitForm" href="#" class="btn btn-rose btn-link btn-lg">Lets Go</a>
+                    <input type="submit" id="submitForm" href="#" class="btn btn-rose btn-link btn-lg" onclick="auth()" value="Let's Go" />
                   </div>
                 </form>
               </div>

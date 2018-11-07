@@ -14,6 +14,14 @@ type TacDb struct {
 	last     time.Time
 }
 
+type TacDbEvent struct {
+	Ts		  int
+	Door	  string
+	Uid		  string
+	Lastname  string
+	Firstname string
+}
+
 func (t *TacDb) SetCredentials(tacdb_url string) {
 	fmt.Printf("TAC-DB set creds...\n")
 	t.url = tacdb_url

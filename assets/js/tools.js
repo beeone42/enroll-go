@@ -37,6 +37,20 @@ function formatTag(tag) {
   return (tag);
 }
 
+function formatDate(ts) {
+  var date = new Date(ts * 1000);
+  var year = date.getFullYear();
+  var month = "0" + (date.getMonth() + 1);
+  var day = "0" + date.getDate();
+  var formattedDate = year + "-" + month.substr(-2) + "-" + day.substr(-2)
+
+  var hours = date.getHours();
+  var minutes = "0" + date.getMinutes();
+  var seconds = "0" + date.getSeconds();
+  var formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+  return formattedDate + " " + formattedTime
+}
+
 function reverseTag(tag) {
   res = ""
   for (i = 0; i < tag.length; i += 2) {

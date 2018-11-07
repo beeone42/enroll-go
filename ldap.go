@@ -72,6 +72,7 @@ func (l *Ldap) MapEntry(entry *ldap.Entry) map[string]string {
 	res["gidnumber"] = entry.GetAttributeValue("gidNumber")
 	res["loginshell"] = entry.GetAttributeValue("loginShell")
 	res["alias"] = entry.GetAttributeValue("alias")
+	res["close"] = entry.GetAttributeValue("close")
 	return res
 }
 
@@ -106,7 +107,7 @@ func (l *Ldap) Search(query string) ([]*ldap.Entry, error) {
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		query, []string{"dn", "cn", "uid",
 			"uidnumber", "gidnumber",
-			"sn", "givenname", "mobile", "alias",
+			"sn", "givenname", "mobile", "alias", "close",
 			"badgerfid", "badgepin", "loginshell"}, nil,
 	)
 	sr, err := l.conn.Search(searchRequest)

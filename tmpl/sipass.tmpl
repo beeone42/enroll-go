@@ -50,6 +50,11 @@ function update_datas(porte_id1, porte_id2, event_id)
       return ;
     if (data.id != last_id)
     {
+      if (data.Tac.prettyname == "") {
+        data.Tac.prettyname = data.Ldap[0].cn;
+        data.Tac.company = data.Ldap[0].dn;
+        warn("Tac reply is empty, using Ldap datas")
+      }
       info(data.Tac.prettyname + " (" + data.Tac.company + ")");
       $("#ca_name").text(data.Tac.prettyname);
       $("#ca_company").text(data.Tac.company);

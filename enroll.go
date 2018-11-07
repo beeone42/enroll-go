@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	_ "database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/tkanos/gonfig"
@@ -391,29 +391,35 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetLastUserEvent(w http.ResponseWriter, r *http.Request) {
-	var ts int
+	var e TacDbEvent
+
+	e = TacDbEvent{}
+	e.Ts = 0
+	e.Door = "???"
 	tacdb.Login()
 	vars := mux.Vars(r)
 	login := vars["login"]
 
-	q := fmt.Sprintf("SELECT ts FROM events WHERE uid = '%s' ORDER BY ts DESC LIMIT 1", login)
+	q := fmt.Sprintf("SELECT ts, door FROM events WHERE uid = '%s' ORDER BY ts DESC LIMIT 1", login)
 	rows, err := tacdb.Query(q)
 	if err != nil {
-		fmt.Fprintf(w, err.Error())
-		return
-	}
-	defer rows.Close()
-	if rows.Next() {
-		err2 := rows.Scan(&ts)
-		if err2 == sql.ErrNoRows {
-			fmt.Fprintf(w, "never")
-			tacdb.Logout()
-			return
+		e.Ts = -1
+		e.Door = err.Error()
+	} else {
+		defer rows.Close()
+		if rows.Next() {
+			rows.Scan(&e.Ts, &e.Door)
 		}
 	}
-	fmt.Fprintf(w, "%d", ts)
-	tacdb.Logout()
-	return
+	fmt.Println(e)
+	js, err := json.Marshal(e)
+	if err != nil {
+    	http.Error(w, err.Error(), http.StatusInternalServerError)
+	    return
+  	}
+	fmt.Println(js)
+	w.Header().Set("Content-Type", "application/json")
+  	w.Write(js)
 }
 
 func apiGetCtrlList(w http.ResponseWriter, r *http.Request) {

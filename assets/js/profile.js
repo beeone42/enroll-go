@@ -149,6 +149,11 @@ function fill_tac_data(data) {
       var ids = tags.map(p => formatTag(p.id));
       $("#ca_tags").html(ids.join(", "));
     });
+    $.getJSON("/api/tac/events/bylogin/" + login, function (e) {
+      if (e.Ts > 0) {
+        $("#ca_last_event").html("Last seen " + formatDate(e.Ts) + " on " + e.Door);
+      }
+    });
 
   });
 

@@ -31,6 +31,7 @@ function ldap_by_rfid(q_rfid, success) {
         $("#ldap_rfid").text(infos[0]['badgerfid']);
         $("#ldap_pin").text(infos[0]['badgepin']);
         $("#ldap_promo").text(ldap_promo_from_dn(infos[0]['dn']));
+        $("#ldap_close").text(infos[0]['close']);
         if (success != null) {
         $("#enroll_rfid").prop('disabled', false);;
           success();
@@ -55,6 +56,7 @@ function ldap_by_login(q_login, success) {
         $("#ldap_rfid").text(infos[0]['badgerfid']);
         $("#ldap_pin").text(infos[0]['badgepin']);
         $("#ldap_promo").text(ldap_promo_from_dn(infos[0]['dn']));
+        $("#ldap_close").text(infos[0]['close']);
     if ($("#p_name").text() == "") {
       $("#p_name").text(infos[0]['cn']);
     }

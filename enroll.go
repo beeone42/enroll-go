@@ -411,13 +411,11 @@ func apiGetLastUserEvent(w http.ResponseWriter, r *http.Request) {
 			rows.Scan(&e.Ts, &e.Door)
 		}
 	}
-	fmt.Println(e)
 	js, err := json.Marshal(e)
 	if err != nil {
     	http.Error(w, err.Error(), http.StatusInternalServerError)
 	    return
   	}
-	fmt.Println(js)
 	w.Header().Set("Content-Type", "application/json")
   	w.Write(js)
 }

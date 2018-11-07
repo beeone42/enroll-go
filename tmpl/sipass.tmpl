@@ -50,7 +50,7 @@ function update_datas(porte_id1, porte_id2, event_id)
       return ;
     if (data.id != last_id)
     {
-      if (data.Tac.prettyname == "") {
+      if ((data.Tac.prettyname == "") && (data.Ldap)) {
         data.Tac.prettyname = data.Ldap[0].cn;
         data.Tac.company = data.Ldap[0].dn;
         warn("Tac reply is empty, using Ldap datas")
@@ -66,11 +66,14 @@ function update_datas(porte_id1, porte_id2, event_id)
           $("#ca_pin").html("<span style='color: red'>" + data.Pin + "</span><span style='color: green'>" + data.Ldap[0].badgepin + "</span>");
         }
       }
+      $("#profile_link").attr("href", "/profile");
       if (data.UID != "") {
         $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + data.UID);
+        $("#profile_link").attr("href", "/profile/login/" + data.UID);
       } else {
         if (data.Tac.email != "") {
           $("#avatar").attr("src", "{{ .Conf.PhotoUrl }}" + data.Tac.email.split("@")[0])
+          $("#profile_link").attr("href", "/profile/login/" + data.Tac.email.split("@")[0]);
         }
       }
 
@@ -138,7 +141,9 @@ $(function () {
                 <i class="material-icons">face</i>
               </span>
             </div>
-            <span id="ca_name"></span>
+            <a id="profile_link" href="/profile">
+              <span id="ca_name"></span>
+            </a>
           </div>
           <!-- TAC company -->
           <div class="input-group">

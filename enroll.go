@@ -148,8 +148,7 @@ func tokenGenerator() string {
 	return fmt.Sprintf("%x", b)
 }
 
-func checkSession(w http.ResponseWriter, r *http.Request) bool {
-	res := make(map[string]string)
+func checkAuth(r *http.Request) bool {
 	bearer, exists := r.Header["Authorization"]
 	if exists {
 		tmp := strings.SplitN(bearer[0], " ", 2)
@@ -160,6 +159,14 @@ func checkSession(w http.ResponseWriter, r *http.Request) bool {
 				return true
 			}
 		}
+	}
+	return false	
+}
+
+func checkSession(w http.ResponseWriter, r *http.Request) bool {
+	res := make(map[string]string)
+	if checkAuth(r) {
+		return true
 	}
 	res["error"] = "true"
 	res["authentified"] = "false"
@@ -391,6 +398,7 @@ func apiGetLastTagReadInfos(w http.ResponseWriter, r *http.Request) {
 }
 
 func apiGetLastUserEvent(w http.ResponseWriter, r *http.Request) {
+	if checkSession(w, r) != true { return }
 	var e TacDbEvent
 
 	e = TacDbEvent{}
@@ -472,7 +480,7 @@ func apiDoAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func ldapStaffSearchByLogin(w http.ResponseWriter, r *http.Request) {
-	//if checkSession(w, r) != true { return }
+	if checkSession(w, r) != true { return }
 	vars := mux.Vars(r)
 	login := vars["login"]
 	search := strings.Replace("(sAMAccountName={login})", "{login}", login, -1)
